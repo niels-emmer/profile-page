@@ -61,6 +61,9 @@ docker compose logs profile-page  # first-run password is printed here if genera
 The container joins the external `proxy-net` network and listens on port `3000`;
 **no ports are published**. Point your reverse proxy at `http://profile-page:3000`.
 
+Once it is running, open `/admin` on your domain to edit your profile — see
+[Editing your profile](#editing-your-profile).
+
 ### Behind a reverse proxy
 
 Any TLS-terminating proxy works (Nginx Proxy Manager, Caddy, Traefik). For Nginx:
@@ -93,6 +96,45 @@ npm start         # http://localhost:3000
 ```
 
 Requires **Node.js >= 24** — the app runs TypeScript directly, with no build step.
+
+## Editing your profile
+
+Everything is edited from the built-in admin panel — no config files, no redeploys.
+
+1. Open **`/admin`** on your site (e.g. `https://example.com/admin`, or
+   `http://localhost:3000/admin` locally). You are redirected to `/login`.
+2. Sign in with your `ADMIN_PASSWORD`. If you did not set one, the random
+   password generated on first run is printed once in the logs
+   (`docker compose logs profile-page`).
+3. Edit and save — changes appear on the public page immediately.
+
+The panel covers:
+
+| Section | What it does |
+|---|---|
+| **Profile** | Name, tagline, and description |
+| **Theme** | Default light/dark/system, whether visitors can switch, and text/accent colours |
+| **Avatar** | Upload a square image (shown as a circle) |
+| **Favicon** | Upload a browser-tab icon (centre-cropped to a 512×512 PNG in your browser) |
+| **Background** | Per-theme background image with size, position, tiling, and scroll options |
+| **Links** | Add, edit, delete, and drag-to-reorder your link buttons |
+| **Backup & restore** | Download or restore the whole profile as a `.tar.gz` |
+
+### Link icons
+
+Each link has an **Icon value** field, which accepts either:
+
+- **A Font Awesome class.** The bundled set is
+  [Font Awesome Free 6.7.1](https://fontawesome.com/) — solid, regular, and
+  brand icons. Find one at [fontawesome.com/search](https://fontawesome.com/search),
+  copy its class, and paste it in, e.g. `fa-solid fa-globe`,
+  `fa-brands fa-github`, or `fa-regular fa-envelope`. Include the family prefix
+  (`fa-solid`, `fa-regular`, or `fa-brands`) or the icon will not render.
+- **An image path** — a local asset such as `/assets/icons/github.svg` (the
+  bundled [Simple Icons](https://simpleicons.org/) brand icons) or an uploaded
+  file under `/assets/uploads/`.
+
+Set **Icon type** to match: *Font Awesome* for a class, *Image path* for a path.
 
 ## Build, debug, develop
 
