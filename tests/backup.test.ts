@@ -102,6 +102,35 @@ test('restoreBackup replaces content and images', () => {
   }
 });
 
+test('backup round-trips per-theme background settings', () => {
+  const source = makeFixture();
+  const target = makeFixture();
+  try {
+    saveTheme(source.db, {
+      ...DEFAULT_THEME,
+      backgroundImageDark: {
+        imagePath: '/assets/uploads/bg.webp',
+        size: 'contain',
+        position: 'bottom right',
+        repeat: 'repeat',
+        attachment: 'fixed',
+      },
+    });
+    const archive = buildBackup(source.db, source.config.uploadsDir);
+    restoreBackup(target.db, target.config.uploadsDir, archive);
+
+    const bg = getTheme(target.db).backgroundImageDark;
+    assert.equal(bg.imagePath, '/assets/uploads/bg.webp');
+    assert.equal(bg.size, 'contain');
+    assert.equal(bg.position, 'bottom right');
+    assert.equal(bg.repeat, 'repeat');
+    assert.equal(bg.attachment, 'fixed');
+  } finally {
+    dispose(source);
+    dispose(target);
+  }
+});
+
 test('restoreBackup rejects invalid archives without writing', () => {
   const fixture = makeFixture();
   try {

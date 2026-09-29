@@ -11,7 +11,21 @@
     "textDark": "#ffffff",
     "textLight": "#222222",
     "accentColor": "#0085ff",
-    "faviconPath": "/assets/favicon.png"
+    "faviconPath": "/assets/favicon.png",
+    "backgroundImageDark": {
+      "imagePath": null,
+      "size": "cover",
+      "position": "center",
+      "repeat": "no-repeat",
+      "attachment": "scroll"
+    },
+    "backgroundImageLight": {
+      "imagePath": null,
+      "size": "cover",
+      "position": "center",
+      "repeat": "no-repeat",
+      "attachment": "scroll"
+    }
   },
   "links": [
     {

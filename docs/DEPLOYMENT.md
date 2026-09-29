@@ -78,9 +78,11 @@ host and start the container.
 `/admin` has a **Backup & restore** section:
 
 - **Download backup** produces a `.tar.gz` containing `seed.json` (profile,
-  theme, links) and every file in `uploads/`.
+  theme, links) and every file in `uploads/` — including an uploaded favicon and
+  background images.
 - **Restore backup** accepts such an archive, validates it fully, then replaces
-  the profile, theme, links, and uploaded images.
+  the profile, theme, links, and uploaded images. Backups made before background
+  images existed still restore: missing background fields fall back to defaults.
 
 Restore is destructive: it overwrites the current setup. Download a fresh backup
 before restoring an older one. The archive format and validation rules are in

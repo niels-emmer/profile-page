@@ -25,6 +25,15 @@ a pixel-faithful link-in-bio page.
   of link buttons.
 - Online editor at `/admin` (login required) — edit text, upload an avatar,
   add/reorder/delete links, pick button colours.
+- **Custom favicon** — upload one and it is centre-cropped to a 512×512 PNG in the
+  browser (plus an `apple-touch-icon`), or remove it to fall back to the bundled
+  default.
+- **Per-theme background images** — upload a separate image for the dark and light
+  schemes, choose how it is placed (fill, fit, stretch, original size), anchored
+  (nine positions), tiled, and whether it scrolls or stays fixed. Uploads are
+  downscaled and converted to WebP in the browser for fast loading.
+- **Drag to reorder** links with the handle on the right of each card; the
+  Move up/down buttons remain for keyboard and no-JS use.
 - One-click **backup and restore** — download the whole profile (content, theme,
   and images) as a `.tar.gz`, and restore it later.
 - Colour helpers: curated colour schemes, or generate a solid/gradient button

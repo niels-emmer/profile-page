@@ -1,4 +1,4 @@
-import type { NewLink, Profile, SeedFile, ThemeSettings } from './types.ts';
+import type { BackgroundSettings, NewLink, Profile, SeedFile, ThemeSettings } from './types.ts';
 
 /** Content shown by a freshly seeded, empty installation. */
 export const DEFAULT_PROFILE: Profile = {
@@ -9,6 +9,15 @@ export const DEFAULT_PROFILE: Profile = {
   avatarPath: null,
 };
 
+/** Default background placement: no image, filled and centred. */
+export const DEFAULT_BACKGROUND: BackgroundSettings = {
+  imagePath: null,
+  size: 'cover',
+  position: 'center',
+  repeat: 'no-repeat',
+  attachment: 'scroll',
+};
+
 /** Default look: the dark/light gradient theme the app is designed around. */
 export const DEFAULT_THEME: ThemeSettings = {
   backgroundDark: 'radial-gradient(circle, #151826 28%, #0d0f18 100%)',
@@ -17,6 +26,8 @@ export const DEFAULT_THEME: ThemeSettings = {
   textLight: '#222222',
   accentColor: '#0085ff',
   faviconPath: '/assets/favicon.png',
+  backgroundImageDark: { ...DEFAULT_BACKGROUND },
+  backgroundImageLight: { ...DEFAULT_BACKGROUND },
 };
 
 /** A representative set of links so a fresh install is not an empty page. */

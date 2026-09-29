@@ -1,7 +1,52 @@
 import type { DatabaseSync } from 'node:sqlite';
+import { DEFAULT_BACKGROUND, DEFAULT_THEME } from './defaults.ts';
 import { createLink, deleteLink, listLinks, saveProfile, saveTheme } from './db.ts';
-import type { NewLink, Profile, SeedFile, ThemeSettings } from './types.ts';
-import { isHttpUrl, isSafeAssetRef } from './validate.ts';
+import type { BackgroundSettings, NewLink, Profile, SeedFile, ThemeSettings } from './types.ts';
+import {
+  isBackgroundAttachment,
+  isBackgroundPosition,
+  isBackgroundRepeat,
+  isBackgroundSize,
+  isHttpUrl,
+  isSafeAssetRef,
+} from './validate.ts';
+
+function asObject(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+}
+
+function asString(value: unknown, fallback: string): string {
+  return typeof value === 'string' && value.length > 0 ? value : fallback;
+}
+
+/** Fill in defaults for fields missing from older backups. */
+function normalizeBackground(raw: unknown): BackgroundSettings {
+  const obj = asObject(raw);
+  const imagePath = obj['imagePath'];
+  return {
+    imagePath: typeof imagePath === 'string' && imagePath.length > 0 ? imagePath : null,
+    size: isBackgroundSize(obj['size']) ? obj['size'] : DEFAULT_BACKGROUND.size,
+    position: isBackgroundPosition(obj['position']) ? obj['position'] : DEFAULT_BACKGROUND.position,
+    repeat: isBackgroundRepeat(obj['repeat']) ? obj['repeat'] : DEFAULT_BACKGROUND.repeat,
+    attachment: isBackgroundAttachment(obj['attachment'])
+      ? obj['attachment']
+      : DEFAULT_BACKGROUND.attachment,
+  };
+}
+
+function normalizeTheme(raw: unknown): ThemeSettings {
+  const obj = asObject(raw);
+  return {
+    backgroundDark: asString(obj['backgroundDark'], DEFAULT_THEME.backgroundDark),
+    backgroundLight: asString(obj['backgroundLight'], DEFAULT_THEME.backgroundLight),
+    textDark: asString(obj['textDark'], DEFAULT_THEME.textDark),
+    textLight: asString(obj['textLight'], DEFAULT_THEME.textLight),
+    accentColor: asString(obj['accentColor'], DEFAULT_THEME.accentColor),
+    faviconPath: asString(obj['faviconPath'], DEFAULT_THEME.faviconPath),
+    backgroundImageDark: normalizeBackground(obj['backgroundImageDark']),
+    backgroundImageLight: normalizeBackground(obj['backgroundImageLight']),
+  };
+}
 
 export function parseSeed(raw: unknown): SeedFile {
   if (typeof raw !== 'object' || raw === null) {
@@ -22,7 +67,7 @@ export function parseSeed(raw: unknown): SeedFile {
   }
   return {
     profile: profile as Profile,
-    theme: theme as ThemeSettings,
+    theme: normalizeTheme(theme),
     links: links as NewLink[],
   };
 }
@@ -34,6 +79,11 @@ export function validateSeed(seed: SeedFile): void {
   }
   if (!isSafeAssetRef(seed.theme.faviconPath)) {
     throw new Error(`Invalid faviconPath: ${seed.theme.faviconPath}`);
+  }
+  for (const bg of [seed.theme.backgroundImageDark, seed.theme.backgroundImageLight]) {
+    if (bg.imagePath !== null && !isSafeAssetRef(bg.imagePath)) {
+      throw new Error(`Invalid background image path: ${bg.imagePath}`);
+    }
   }
   for (const link of seed.links) {
     if (!isHttpUrl(link.url)) {

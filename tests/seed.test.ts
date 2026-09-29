@@ -22,6 +22,20 @@ const seed: SeedFile = {
     textLight: '#222222',
     accentColor: '#0085ff',
     faviconPath: '/assets/favicon.png',
+    backgroundImageDark: {
+      imagePath: '/assets/uploads/dark.webp',
+      size: 'contain',
+      position: 'bottom right',
+      repeat: 'repeat',
+      attachment: 'fixed',
+    },
+    backgroundImageLight: {
+      imagePath: null,
+      size: 'cover',
+      position: 'center',
+      repeat: 'no-repeat',
+      attachment: 'scroll',
+    },
   },
   links: [
     {
@@ -71,6 +85,33 @@ test('validateSeed rejects bad URLs and non-local asset paths', () => {
     validateSeed({ ...seed, profile: { ...seed.profile, avatarPath: 'https://evil.example/a.jpg' } }),
   );
   assert.throws(() => validateSeed({ ...seed, links: [{ ...second, iconValue: 'https://evil.example/i.png' }] }));
+  assert.throws(() =>
+    validateSeed({
+      ...seed,
+      theme: {
+        ...seed.theme,
+        backgroundImageDark: { ...seed.theme.backgroundImageDark, imagePath: 'https://evil.example/bg.jpg' },
+      },
+    }),
+  );
+});
+
+test('parseSeed fills defaults for a theme from an older backup', () => {
+  const parsed = parseSeed({
+    profile: seed.profile,
+    theme: {
+      backgroundDark: '#000000',
+      backgroundLight: '#ffffff',
+      textDark: '#ffffff',
+      textLight: '#222222',
+      accentColor: '#0085ff',
+      faviconPath: '/assets/favicon.png',
+    },
+    links: [],
+  });
+  assert.equal(parsed.theme.backgroundImageDark.imagePath, null);
+  assert.equal(parsed.theme.backgroundImageDark.size, 'cover');
+  assert.equal(parsed.theme.backgroundImageLight.attachment, 'scroll');
 });
 
 test('applySeed replaces the profile, theme, and links', () => {
