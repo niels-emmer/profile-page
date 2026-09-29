@@ -17,6 +17,7 @@ import {
 } from './auth.ts';
 import { BackupError, MAX_ARCHIVE_BYTES, buildBackup, restoreBackup } from './backup.ts';
 import type { Config } from './config.ts';
+import { DEFAULT_THEME } from './defaults.ts';
 import {
   createLink,
   deleteLink,
@@ -30,9 +31,16 @@ import {
   type AuthRecord,
 } from './db.ts';
 import { renderAdminPage, renderLoginPage, renderProfilePage } from './render.ts';
-import type { NewLink, ThemeSettings } from './types.ts';
-import { UploadError, saveImage } from './upload.ts';
-import { isHttpUrl, isSafeAssetPath, isSafeAssetRef } from './validate.ts';
+import type { BackgroundSettings, NewLink, ThemeSettings } from './types.ts';
+import { MAX_BACKGROUND_BYTES, UploadError, deleteUpload, saveImage } from './upload.ts';
+import {
+  isBackgroundAttachment,
+  isBackgroundPosition,
+  isBackgroundSize,
+  isHttpUrl,
+  isSafeAssetPath,
+  isSafeAssetRef,
+} from './validate.ts';
 
 export interface AppDeps {
   config: Config;
@@ -59,6 +67,8 @@ const CSP = [
 
 const LOGIN_BODY_LIMIT = 16 * 1024;
 const AVATAR_BODY_LIMIT = 6 * 1024 * 1024;
+const IMAGE_BODY_LIMIT = 6 * 1024 * 1024;
+const BACKGROUND_BODY_LIMIT = MAX_BACKGROUND_BYTES + 1024 * 1024;
 
 export function createApp(deps: AppDeps): Hono {
   const { config, db, auth } = deps;
@@ -90,6 +100,21 @@ export function createApp(deps: AppDeps): Hono {
   function emptyToNull(value: string): string | null {
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : null;
+  }
+
+  /** Which colour scheme a background request targets. */
+  function themeSlot(value: string): 'dark' | 'light' | undefined {
+    return value === 'dark' || value === 'light' ? value : undefined;
+  }
+
+  function withBackground(
+    theme: ThemeSettings,
+    slot: 'dark' | 'light',
+    background: BackgroundSettings,
+  ): ThemeSettings {
+    return slot === 'dark'
+      ? { ...theme, backgroundImageDark: background }
+      : { ...theme, backgroundImageLight: background };
   }
 
   function clientIp(c: Context): string {
@@ -251,19 +276,15 @@ export function createApp(deps: AppDeps): Hono {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
 
+    // The profile form owns only the text colours and accent; the favicon and
+    // background settings are managed by their own routes and must be preserved.
+    const currentTheme = getTheme(db);
     const theme: ThemeSettings = {
-      backgroundDark: formField(body, 'backgroundDark').trim(),
-      backgroundLight: formField(body, 'backgroundLight').trim(),
-      textDark: formField(body, 'textDark').trim(),
-      textLight: formField(body, 'textLight').trim(),
-      accentColor: formField(body, 'accentColor').trim(),
-      faviconPath: formField(body, 'faviconPath').trim(),
+      ...currentTheme,
+      textDark: formField(body, 'textDark').trim() || currentTheme.textDark,
+      textLight: formField(body, 'textLight').trim() || currentTheme.textLight,
+      accentColor: formField(body, 'accentColor').trim() || currentTheme.accentColor,
     };
-    if (!isSafeAssetRef(theme.faviconPath)) {
-      return c.redirect(
-        '/admin?error=' + encodeURIComponent('Favicon must be a local /assets/ path'),
-      );
-    }
 
     const current = getProfile(db);
     saveProfile(db, {
@@ -291,6 +312,94 @@ export function createApp(deps: AppDeps): Hono {
       const message = error instanceof UploadError ? error.message : 'Upload failed.';
       return c.redirect(`/admin?error=${encodeURIComponent(message)}`);
     }
+    return c.redirect('/admin?ok=1');
+  });
+
+  app.post('/admin/favicon', bodyLimit({ maxSize: IMAGE_BODY_LIMIT }), async (c) => {
+    const body = await c.req.parseBody();
+    if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
+
+    const file = body['favicon'];
+    if (!(file instanceof File)) return c.redirect('/admin?error=No%20file%20uploaded');
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const saved = saveImage(bytes, config.uploadsDir);
+      const theme = getTheme(db);
+      deleteUpload(config.uploadsDir, theme.faviconPath);
+      saveTheme(db, { ...theme, faviconPath: saved.path });
+    } catch (error) {
+      const message = error instanceof UploadError ? error.message : 'Upload failed.';
+      return c.redirect(`/admin?error=${encodeURIComponent(message)}`);
+    }
+    return c.redirect('/admin?ok=1');
+  });
+
+  app.post('/admin/favicon/remove', async (c) => {
+    const body = await c.req.parseBody();
+    if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
+    const theme = getTheme(db);
+    deleteUpload(config.uploadsDir, theme.faviconPath);
+    saveTheme(db, { ...theme, faviconPath: DEFAULT_THEME.faviconPath });
+    return c.redirect('/admin?ok=1');
+  });
+
+  app.post('/admin/background', bodyLimit({ maxSize: BACKGROUND_BODY_LIMIT }), async (c) => {
+    const body = await c.req.parseBody();
+    if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
+
+    const slot = themeSlot(formField(body, 'theme'));
+    if (slot === undefined) {
+      return c.redirect('/admin?error=' + encodeURIComponent('Unknown colour scheme'));
+    }
+    const file = body['background'];
+    if (!(file instanceof File)) return c.redirect('/admin?error=No%20file%20uploaded');
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const saved = saveImage(bytes, config.uploadsDir, MAX_BACKGROUND_BYTES);
+      const theme = getTheme(db);
+      const current = slot === 'dark' ? theme.backgroundImageDark : theme.backgroundImageLight;
+      deleteUpload(config.uploadsDir, current.imagePath);
+      saveTheme(db, withBackground(theme, slot, { ...current, imagePath: saved.path }));
+    } catch (error) {
+      const message = error instanceof UploadError ? error.message : 'Upload failed.';
+      return c.redirect(`/admin?error=${encodeURIComponent(message)}`);
+    }
+    return c.redirect('/admin?ok=1');
+  });
+
+  app.post('/admin/background/remove', async (c) => {
+    const body = await c.req.parseBody();
+    if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
+    const slot = themeSlot(formField(body, 'theme'));
+    if (slot === undefined) {
+      return c.redirect('/admin?error=' + encodeURIComponent('Unknown colour scheme'));
+    }
+    const theme = getTheme(db);
+    const current = slot === 'dark' ? theme.backgroundImageDark : theme.backgroundImageLight;
+    deleteUpload(config.uploadsDir, current.imagePath);
+    saveTheme(db, withBackground(theme, slot, { ...current, imagePath: null }));
+    return c.redirect('/admin?ok=1');
+  });
+
+  app.post('/admin/background/options', async (c) => {
+    const body = await c.req.parseBody();
+    if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
+
+    const slot = themeSlot(formField(body, 'theme'));
+    if (slot === undefined) {
+      return c.redirect('/admin?error=' + encodeURIComponent('Unknown colour scheme'));
+    }
+    const size = formField(body, 'backgroundSize');
+    const position = formField(body, 'backgroundPosition');
+    const attachment = formField(body, 'backgroundAttachment');
+    if (!isBackgroundSize(size) || !isBackgroundPosition(position) || !isBackgroundAttachment(attachment)) {
+      return c.redirect('/admin?error=' + encodeURIComponent('Invalid background option'));
+    }
+    const repeat = formField(body, 'backgroundRepeat') === 'on' ? 'repeat' : 'no-repeat';
+    const theme = getTheme(db);
+    const current = slot === 'dark' ? theme.backgroundImageDark : theme.backgroundImageLight;
+    const updated: BackgroundSettings = { ...current, size, position, repeat, attachment };
+    saveTheme(db, withBackground(theme, slot, updated));
     return c.redirect('/admin?ok=1');
   });
 

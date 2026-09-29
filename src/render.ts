@@ -1,5 +1,12 @@
 import { COLOR_SCHEMES } from './colors.ts';
-import type { Link, Profile, ThemeSettings } from './types.ts';
+import type {
+  BackgroundPosition,
+  BackgroundSettings,
+  BackgroundSize,
+  Link,
+  Profile,
+  ThemeSettings,
+} from './types.ts';
 
 const BADGE_SVG =
   '<svg class="badge" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" aria-hidden="true">' +
@@ -22,6 +29,27 @@ export function escapeHtml(value: string): string {
  */
 export function sanitizeCss(value: string): string {
   return value.replace(/[^a-zA-Z0-9#(),.%\s/-]/g, '');
+}
+
+/** MIME type for the favicon, derived from the (validated) file extension. */
+export function faviconMime(path: string): string {
+  const ext = path.split('.').pop()?.toLowerCase();
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (ext === 'webp') return 'image/webp';
+  if (ext === 'svg') return 'image/svg+xml';
+  return 'image/png';
+}
+
+/**
+ * Compose a CSS `background` value: the uploaded image (if any) layered over
+ * the base colour/gradient. Every option is an enum, so nothing user-supplied
+ * reaches the stylesheet except the validated asset path.
+ */
+export function backgroundValue(base: string, bg: BackgroundSettings): string {
+  if (bg.imagePath === null) return sanitizeCss(base);
+  const size = bg.size === 'stretch' ? '100% 100%' : bg.size;
+  const layer = `url(${bg.imagePath}) ${bg.position}/${size} ${bg.repeat} ${bg.attachment}`;
+  return sanitizeCss(`${layer}, ${base}`);
 }
 
 export interface PageContext {
@@ -60,8 +88,8 @@ export function renderProfilePage(ctx: PageContext): string {
   const themeStyle =
     `<style>` +
     `:root{--accent:${sanitizeCss(theme.accentColor)};}` +
-    `@media (prefers-color-scheme: dark){:root{--bg:${sanitizeCss(theme.backgroundDark)};--fg:${sanitizeCss(theme.textDark)};}}` +
-    `@media (prefers-color-scheme: light){:root{--bg:${sanitizeCss(theme.backgroundLight)};--fg:${sanitizeCss(theme.textLight)};}}` +
+    `@media (prefers-color-scheme: dark){:root{--bg:${backgroundValue(theme.backgroundDark, theme.backgroundImageDark)};--fg:${sanitizeCss(theme.textDark)};}}` +
+    `@media (prefers-color-scheme: light){:root{--bg:${backgroundValue(theme.backgroundLight, theme.backgroundImageLight)};--fg:${sanitizeCss(theme.textLight)};}}` +
     `</style>`;
 
   const buttons = links.map((link, index) => renderLink(link, index)).join('\n');
@@ -84,7 +112,8 @@ export function renderProfilePage(ctx: PageContext): string {
 <meta name="twitter:description" content="${escapeHtml(description)}">
 <meta name="twitter:image" content="${escapeHtml(avatarUrl)}">
 <title>${escapeHtml(profile.name)}</title>
-<link rel="icon" type="image/png" href="${escapeHtml(theme.faviconPath)}">
+<link rel="icon" type="${faviconMime(theme.faviconPath)}" href="${escapeHtml(theme.faviconPath)}">
+<link rel="apple-touch-icon" href="${escapeHtml(theme.faviconPath)}">
 <link rel="stylesheet" href="/assets/css/fontawesome.css">
 <link rel="stylesheet" href="/assets/css/style.css">
 ${themeStyle}
@@ -121,7 +150,10 @@ export function renderLoginPage(csrfToken: string, error?: string): string {
 </head>
 <body class="admin-body">
 <main class="admin-card admin-card--narrow">
-  <h1 class="admin-title">Sign in</h1>
+  <div class="admin-card-header">
+    <h1 class="admin-title">Sign in</h1>
+    <p class="admin-card-description">Enter your admin password to continue.</p>
+  </div>
   ${banner}
   <form method="post" action="/login" class="admin-form">
     <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
@@ -159,11 +191,122 @@ function colorField(label: string, name: string, value: string): string {
     </label>`;
 }
 
+function cardHeader(title: string, description?: string): string {
+  const hint =
+    description !== undefined
+      ? `<p class="admin-card-description">${escapeHtml(description)}</p>`
+      : '';
+  return `<div class="admin-card-header"><h2>${escapeHtml(title)}</h2>${hint}</div>`;
+}
+
 function presetButtons(): string {
   return COLOR_SCHEMES.map(
     (scheme) =>
       `<button type="button" class="preset" data-from="${escapeHtml(scheme.from)}" data-to="${escapeHtml(scheme.to)}" title="${escapeHtml(scheme.name)}" style="background-image: linear-gradient(45deg, ${escapeHtml(scheme.from)} 0%, ${escapeHtml(scheme.to)} 100%)">${escapeHtml(scheme.name)}</button>`,
   ).join('\n');
+}
+
+const BACKGROUND_SIZE_OPTIONS: Array<{ value: BackgroundSize; label: string }> = [
+  { value: 'cover', label: 'Fill (cover)' },
+  { value: 'contain', label: 'Fit (contain)' },
+  { value: 'stretch', label: 'Stretch' },
+  { value: 'auto', label: 'Original size' },
+];
+
+const BACKGROUND_POSITION_OPTIONS: Array<{ value: BackgroundPosition; label: string }> = [
+  { value: 'top left', label: 'Top left' },
+  { value: 'top', label: 'Top' },
+  { value: 'top right', label: 'Top right' },
+  { value: 'left', label: 'Left' },
+  { value: 'center', label: 'Center' },
+  { value: 'right', label: 'Right' },
+  { value: 'bottom left', label: 'Bottom left' },
+  { value: 'bottom', label: 'Bottom' },
+  { value: 'bottom right', label: 'Bottom right' },
+];
+
+const BACKGROUND_ATTACHMENT_OPTIONS = [
+  { value: 'scroll', label: 'Scrolls with the page' },
+  { value: 'fixed', label: 'Fixed (stays put)' },
+];
+
+function selectField(
+  label: string,
+  name: string,
+  options: Array<{ value: string; label: string }>,
+  selected: string,
+): string {
+  const opts = options
+    .map(
+      (option) =>
+        `<option value="${escapeHtml(option.value)}"${option.value === selected ? ' selected' : ''}>${escapeHtml(option.label)}</option>`,
+    )
+    .join('');
+  return `<label class="admin-field">${escapeHtml(label)}<select name="${name}">${opts}</select></label>`;
+}
+
+function faviconSection(theme: ThemeSettings, csrfToken: string): string {
+  const custom = theme.faviconPath.startsWith('/assets/uploads/');
+  const remove = custom
+    ? `<form method="post" action="/admin/favicon/remove" class="inline-form" data-confirm="Remove the custom favicon?">
+      <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
+      <button type="submit" class="admin-button admin-button--danger">Remove favicon</button>
+    </form>`
+    : '';
+  return `<section id="favicon" class="admin-card">
+    ${cardHeader('Favicon', 'Shown in the browser tab and on mobile home screens.')}
+    <img class="admin-favicon" src="${escapeHtml(theme.faviconPath)}" alt="Current favicon">
+    <form method="post" action="/admin/favicon" enctype="multipart/form-data" class="admin-form" data-image-process="favicon">
+      <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
+      <label class="admin-field">New favicon (JPEG, PNG, WebP; max 5 MB)
+        <input type="file" name="favicon" accept="image/jpeg,image/png,image/webp" required>
+      </label>
+      <div class="admin-actions"><button type="submit" class="admin-button">Upload favicon</button></div>
+    </form>
+    ${remove}
+  </section>`;
+}
+
+function backgroundSection(
+  slot: 'dark' | 'light',
+  title: string,
+  bg: BackgroundSettings,
+  csrfToken: string,
+): string {
+  const preview =
+    bg.imagePath !== null
+      ? `<img class="admin-background-preview" src="${escapeHtml(bg.imagePath)}" alt="Current ${escapeHtml(title.toLowerCase())} background">`
+      : '<div class="admin-background-preview admin-background-preview--empty">No background image</div>';
+  const remove =
+    bg.imagePath !== null
+      ? `<form method="post" action="/admin/background/remove" class="inline-form" data-confirm="Remove the ${escapeHtml(title.toLowerCase())} background image?">
+      <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
+      <input type="hidden" name="theme" value="${slot}">
+      <button type="submit" class="admin-button admin-button--danger">Remove background</button>
+    </form>`
+      : '';
+  return `<details class="bg-section">
+  <summary>${escapeHtml(title)}</summary>
+  ${preview}
+  <form method="post" action="/admin/background" enctype="multipart/form-data" class="admin-form" data-image-process="background">
+    <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
+    <input type="hidden" name="theme" value="${slot}">
+    <label class="admin-field">New background (JPEG, PNG, WebP; max 8 MB)
+      <input type="file" name="background" accept="image/jpeg,image/png,image/webp" required>
+    </label>
+    <div class="admin-actions"><button type="submit" class="admin-button">Upload background</button></div>
+  </form>
+  ${remove}
+  <form method="post" action="/admin/background/options" class="admin-form">
+    <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
+    <input type="hidden" name="theme" value="${slot}">
+    ${selectField('Size', 'backgroundSize', BACKGROUND_SIZE_OPTIONS, bg.size)}
+    ${selectField('Position', 'backgroundPosition', BACKGROUND_POSITION_OPTIONS, bg.position)}
+    <label class="admin-check"><input type="checkbox" name="backgroundRepeat"${bg.repeat === 'repeat' ? ' checked' : ''}> Tile (repeat)</label>
+    ${selectField('Scroll', 'backgroundAttachment', BACKGROUND_ATTACHMENT_OPTIONS, bg.attachment)}
+    <div class="admin-actions"><button type="submit" class="admin-button">Save background options</button></div>
+  </form>
+</details>`;
 }
 
 function moveOrder(links: Link[], index: number, delta: number): string {
@@ -188,8 +331,8 @@ function reorderForm(order: string, csrfToken: string, label: string, disabled: 
 function renderLinkEditor(link: Link, index: number, links: Link[], csrfToken: string): string {
   const upOrder = moveOrder(links, index, -1);
   const downOrder = moveOrder(links, index, 1);
-  return `<details class="link-card">
-  <summary>${escapeHtml(link.text.length > 0 ? link.text : '(untitled)')}</summary>
+  return `<details class="link-card" data-id="${link.id}">
+  <summary><span class="link-title">${escapeHtml(link.text.length > 0 ? link.text : '(untitled)')}</span><button type="button" class="drag-handle" aria-label="Drag to reorder" title="Drag to reorder">⠿</button></summary>
   <form method="post" action="/admin/links" class="admin-form">
     <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
     <input type="hidden" name="id" value="${link.id}">
@@ -252,20 +395,37 @@ export function renderAdminPage(ctx: AdminContext): string {
 </head>
 <body class="admin-body">
 <header class="admin-header">
-  <h1 class="admin-title">Admin</h1>
-  <div class="admin-header-actions">
-    <a class="admin-link" href="/" target="_blank" rel="noopener">View page</a>
-    <form method="post" action="/logout" class="inline-form">
-      <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
-      <button type="submit" class="admin-button admin-button--ghost">Sign out</button>
-    </form>
+  <div class="admin-header-inner">
+    <div class="admin-brand">
+      <span class="admin-brand-mark" aria-hidden="true">◆</span>
+      <h1 class="admin-title">Admin</h1>
+    </div>
+    <div class="admin-header-actions">
+      <a class="admin-link" href="/" target="_blank" rel="noopener">View page</a>
+      <form method="post" action="/logout" class="inline-form">
+        <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
+        <button type="submit" class="admin-button admin-button--outline admin-button--sm">Sign out</button>
+      </form>
+    </div>
   </div>
 </header>
 <main class="admin-main">
   ${banner}${errorBanner}
+  <div class="admin-shell">
+    <aside class="admin-nav">
+      <nav class="admin-nav-list">
+        <a class="admin-nav-link" href="#profile">Profile</a>
+        <a class="admin-nav-link" href="#avatar">Avatar</a>
+        <a class="admin-nav-link" href="#favicon">Favicon</a>
+        <a class="admin-nav-link" href="#background">Background</a>
+        <a class="admin-nav-link" href="#links">Links</a>
+        <a class="admin-nav-link" href="#backup">Backup</a>
+      </nav>
+    </aside>
+    <div class="admin-content">
 
-  <section class="admin-card">
-    <h2>Profile</h2>
+  <section id="profile" class="admin-card">
+    ${cardHeader('Profile', 'Your name, tagline, and text colours.')}
     <form method="post" action="/admin/profile" class="admin-form">
       <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
       ${field('Name', 'name', profile.name)}
@@ -274,18 +434,15 @@ export function renderAdminPage(ctx: AdminContext): string {
         <textarea name="description" rows="3">${escapeHtml(profile.description)}</textarea>
       </label>
       <h3>Theme</h3>
-      ${field('Background (dark)', 'backgroundDark', theme.backgroundDark)}
-      ${field('Background (light)', 'backgroundLight', theme.backgroundLight)}
       ${colorField('Text (dark)', 'textDark', theme.textDark)}
       ${colorField('Text (light)', 'textLight', theme.textLight)}
       ${colorField('Accent', 'accentColor', theme.accentColor)}
-      ${field('Favicon path', 'faviconPath', theme.faviconPath)}
       <div class="admin-actions"><button type="submit" class="admin-button">Save profile</button></div>
     </form>
   </section>
 
-  <section class="admin-card">
-    <h2>Avatar</h2>
+  <section id="avatar" class="admin-card">
+    ${cardHeader('Avatar', 'A square image works best; it is shown as a circle.')}
     <img class="admin-avatar" src="${escapeHtml(avatar)}" alt="Current avatar">
     <form method="post" action="/admin/avatar" enctype="multipart/form-data" class="admin-form">
       <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
@@ -296,13 +453,21 @@ export function renderAdminPage(ctx: AdminContext): string {
     </form>
   </section>
 
-  <section class="admin-card">
-    <h2>Links</h2>
-    ${linkEditors.length > 0 ? linkEditors : '<p class="admin-muted">No links yet.</p>'}
+  ${faviconSection(theme, csrfToken)}
+
+  <section id="background" class="admin-card">
+    ${cardHeader('Background', 'Each colour scheme can have its own background image. Uploads are resized and converted in your browser for fast loading.')}
+    ${backgroundSection('dark', 'Dark theme', theme.backgroundImageDark, csrfToken)}
+    ${backgroundSection('light', 'Light theme', theme.backgroundImageLight, csrfToken)}
   </section>
 
-  <section class="admin-card">
-    <h2>Add link</h2>
+  <section id="links" class="admin-card">
+    ${cardHeader('Links', 'Drag the handle to reorder, or use the Move up/down buttons.')}
+    ${linkEditors.length > 0 ? `<div class="link-list" data-reorder-url="/admin/links/reorder" data-csrf="${escapeHtml(csrfToken)}">${linkEditors}</div>` : '<p class="admin-muted">No links yet.</p>'}
+  </section>
+
+  <section id="add-link" class="admin-card">
+    ${cardHeader('Add link', 'Create a new button on your page.')}
     <form method="post" action="/admin/links" class="admin-form">
       <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
       ${field('Text', 'text', '')}
@@ -331,11 +496,10 @@ export function renderAdminPage(ctx: AdminContext): string {
     </form>
   </section>
 
-  <section class="admin-card">
-    <h2>Backup &amp; restore</h2>
-    <p class="admin-muted">Download everything — content, theme, and images — as a single .tar.gz, or restore a previous backup.</p>
+  <section id="backup" class="admin-card">
+    ${cardHeader('Backup & restore', 'Download everything — content, theme, and images — as a single .tar.gz, or restore a previous backup.')}
     <div class="admin-actions">
-      <a class="admin-button" href="/admin/backup">Download backup</a>
+      <a class="admin-button admin-button--outline" href="/admin/backup">Download backup</a>
     </div>
     <form method="post" action="/admin/restore" enctype="multipart/form-data" class="admin-form" data-confirm="Restoring will replace your current profile, theme, links, and images. Continue?">
       <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
@@ -345,6 +509,9 @@ export function renderAdminPage(ctx: AdminContext): string {
       <div class="admin-actions"><button type="submit" class="admin-button admin-button--danger">Restore backup</button></div>
     </form>
   </section>
+
+    </div>
+  </div>
 </main>
 <script src="/assets/js/admin.js" defer></script>
 </body>

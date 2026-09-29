@@ -32,13 +32,40 @@ export interface Link {
 /** A link as submitted by the admin form (no id/position yet). */
 export type NewLink = Omit<Link, 'id' | 'position'>;
 
+export type BackgroundSize = 'cover' | 'contain' | 'stretch' | 'auto';
+export type BackgroundPosition =
+  | 'center'
+  | 'top'
+  | 'bottom'
+  | 'left'
+  | 'right'
+  | 'top left'
+  | 'top right'
+  | 'bottom left'
+  | 'bottom right';
+export type BackgroundRepeat = 'no-repeat' | 'repeat';
+export type BackgroundAttachment = 'scroll' | 'fixed';
+
+/** Per-theme background image and how it is placed. */
+export interface BackgroundSettings {
+  /** Path under /assets/uploads, or null for no image. */
+  imagePath: string | null;
+  size: BackgroundSize;
+  position: BackgroundPosition;
+  repeat: BackgroundRepeat;
+  attachment: BackgroundAttachment;
+}
+
 export interface ThemeSettings {
+  /** Base colour/gradient layer, shown beneath any background image. */
   backgroundDark: string;
   backgroundLight: string;
   textDark: string;
   textLight: string;
   accentColor: string;
   faviconPath: string;
+  backgroundImageDark: BackgroundSettings;
+  backgroundImageLight: BackgroundSettings;
 }
 
 /** A personal seed file: replaces the profile, theme, and all links. */

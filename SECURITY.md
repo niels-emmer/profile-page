@@ -50,9 +50,14 @@ network, with no published ports. It does not implement TLS itself.
   absolute paths, traversal, symlinks, and device nodes, and validated in full
   before anything is written. Uploads must be JPEG/PNG/WebP by magic bytes or an
   SVG, which is stripped of `<script>`, `on*` handlers, and `javascript:` URLs.
-- **Uploads** — validated by magic bytes (JPEG, PNG, WebP only), capped at 5 MB,
-  and written under a random 16-byte hex filename. The client filename is never
-  used, so it cannot influence the path. SVG is rejected.
+- **Uploads** — validated by magic bytes (JPEG, PNG, WebP only), capped at 5 MB
+  (8 MB for background images), and written under a random 16-byte hex filename.
+  The client filename is never used, so it cannot influence the path. SVG is
+  rejected. Replacing or removing a favicon/background deletes the previous file
+  only when it lives under `/assets/uploads/` with a plain basename; bundled
+  assets are never touched.
+- **Background options** — size, position, repeat, and attachment are validated
+  against fixed enums, so no user-supplied string reaches the stylesheet.
 - **Path traversal** — `/assets/uploads/*` is guarded by an explicit check that
   decodes the path and rejects `..`, NUL, and backslashes, on top of the static
   handler's own guard.
@@ -93,9 +98,10 @@ These are known and deliberate for a single-user personal page:
   recommendation of N=2^17. Acceptable for a single account with a strong password.
 - **The generated first-run password is printed once to the logs.** Set
   `ADMIN_PASSWORD` to avoid it. Treat container logs as sensitive.
-- **Request bodies are buffered before validation.** `/admin/avatar` is gated by
-  auth first, then a 6 MB `bodyLimit`; `/login` has a 16 KB `bodyLimit` and is
-  additionally rate-limited.
+- **Request bodies are buffered before validation.** `/admin/avatar` and
+  `/admin/favicon` are gated by auth first, then a 6 MB `bodyLimit`;
+  `/admin/background` has a 9 MB `bodyLimit`; `/login` has a 16 KB `bodyLimit` and
+  is additionally rate-limited.
 - **No account lockout beyond the IP rate limit.** A distributed attacker with
   many source IPs is not throttled.
 - **No audit log.** Single-user app; changes are not recorded.

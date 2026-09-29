@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { gunzipSync, gzipSync } from 'node:zlib';
-import { deleteLink, ensureSeeded, getProfile, listLinks } from '../src/db.ts';
+import { deleteLink, ensureSeeded, getProfile, getTheme, listLinks } from '../src/db.ts';
 import { createTar, readTar } from '../src/tar.ts';
 import { MAX_UPLOAD_BYTES } from '../src/upload.ts';
 import { FORM_HEADERS, cookieHeader, cookiesFrom, formBody, login, makeTestApp } from './helpers.ts';
@@ -355,18 +355,123 @@ test('admin avatar upload rejects a non-image and an oversized file', async (t) 
   assert.equal(getProfile(ctx.db).avatarPath, null);
 });
 
-test('admin rejects a non-local favicon path without saving the profile', async (t) => {
-  const ctx = makeTestApp({ seed: false });
+test('admin can upload and remove a favicon', async (t) => {
+  const ctx = makeTestApp();
   t.after(() => ctx.cleanup());
   const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}` };
+
+  const form = new FormData();
+  form.set('csrf', csrf);
+  form.set('favicon', new File([PNG], 'favicon.png', { type: 'image/png' }));
+  const uploaded = await ctx.app.request('/admin/favicon', { method: 'POST', headers, body: form });
+  assert.equal(uploaded.status, 302);
+
+  const faviconPath = getTheme(ctx.db).faviconPath;
+  assert.ok(faviconPath.startsWith('/assets/uploads/'));
+  assert.equal((await ctx.app.request(faviconPath)).status, 200);
+
+  const removed = await ctx.app.request('/admin/favicon/remove', {
+    method: 'POST',
+    headers: { ...headers, ...FORM_HEADERS },
+    body: formBody({ csrf }),
+  });
+  assert.equal(removed.status, 302);
+  assert.equal(getTheme(ctx.db).faviconPath, '/assets/favicon.png');
+  assert.equal((await ctx.app.request(faviconPath)).status, 404);
+});
+
+test('admin can upload, configure, and remove a per-theme background', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}` };
+
+  const form = new FormData();
+  form.set('csrf', csrf);
+  form.set('theme', 'dark');
+  form.set('background', new File([PNG], 'bg.png', { type: 'image/png' }));
+  const uploaded = await ctx.app.request('/admin/background', { method: 'POST', headers, body: form });
+  assert.equal(uploaded.status, 302);
+
+  const dark = getTheme(ctx.db).backgroundImageDark;
+  assert.ok(dark.imagePath !== null && dark.imagePath.startsWith('/assets/uploads/'));
+  assert.equal(getTheme(ctx.db).backgroundImageLight.imagePath, null);
+
+  const options = await ctx.app.request('/admin/background/options', {
+    method: 'POST',
+    headers: { ...headers, ...FORM_HEADERS },
+    body: formBody({
+      csrf,
+      theme: 'dark',
+      backgroundSize: 'contain',
+      backgroundPosition: 'bottom right',
+      backgroundRepeat: 'on',
+      backgroundAttachment: 'fixed',
+    }),
+  });
+  assert.equal(options.status, 302);
+  const configured = getTheme(ctx.db).backgroundImageDark;
+  assert.equal(configured.size, 'contain');
+  assert.equal(configured.position, 'bottom right');
+  assert.equal(configured.repeat, 'repeat');
+  assert.equal(configured.attachment, 'fixed');
+
+  const invalid = await ctx.app.request('/admin/background/options', {
+    method: 'POST',
+    headers: { ...headers, ...FORM_HEADERS },
+    body: formBody({ csrf, theme: 'dark', backgroundSize: 'nonsense', backgroundPosition: 'center', backgroundAttachment: 'scroll' }),
+  });
+  assert.equal(invalid.status, 302);
+  assert.match(invalid.headers.get('location') ?? '', /error=/);
+  assert.equal(getTheme(ctx.db).backgroundImageDark.size, 'contain');
+
+  const removed = await ctx.app.request('/admin/background/remove', {
+    method: 'POST',
+    headers: { ...headers, ...FORM_HEADERS },
+    body: formBody({ csrf, theme: 'dark' }),
+  });
+  assert.equal(removed.status, 302);
+  assert.equal(getTheme(ctx.db).backgroundImageDark.imagePath, null);
+});
+
+test('saving the profile preserves the favicon and background settings', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}` };
+
+  const form = new FormData();
+  form.set('csrf', csrf);
+  form.set('theme', 'light');
+  form.set('background', new File([PNG], 'bg.png', { type: 'image/png' }));
+  await ctx.app.request('/admin/background', { method: 'POST', headers, body: form });
+  const before = getTheme(ctx.db);
+
   const res = await ctx.app.request('/admin/profile', {
     method: 'POST',
-    headers: { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS },
-    body: formBody({ csrf, name: 'Should Not Persist', faviconPath: 'https://evil.example/f.ico' }),
+    headers: { ...headers, ...FORM_HEADERS },
+    body: formBody({ csrf, name: 'Kept', tagline: 'T', description: 'D', textDark: '#ffffff', textLight: '#222222', accentColor: '#0085ff' }),
   });
   assert.equal(res.status, 302);
-  assert.match(res.headers.get('location') ?? '', /error=/);
-  assert.equal(getProfile(ctx.db).name, 'Alex Rivera');
+  const after = getTheme(ctx.db);
+  assert.equal(after.faviconPath, before.faviconPath);
+  assert.equal(after.backgroundImageLight.imagePath, before.backgroundImageLight.imagePath);
+  assert.equal(getProfile(ctx.db).name, 'Kept');
+});
+
+test('new admin image routes reject a missing CSRF token', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { session } = await login(ctx.app);
+  for (const path of ['/admin/favicon', '/admin/favicon/remove', '/admin/background', '/admin/background/remove', '/admin/background/options']) {
+    const res = await ctx.app.request(path, {
+      method: 'POST',
+      headers: { cookie: `session=${session}`, ...FORM_HEADERS },
+      body: formBody({ csrf: 'wrong' }),
+    });
+    assert.equal(res.status, 403, path);
+  }
 });
 
 test('admin rejects a non-local image icon path', async (t) => {

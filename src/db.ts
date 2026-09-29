@@ -1,7 +1,13 @@
 import { DatabaseSync } from 'node:sqlite';
 import type { Config } from './config.ts';
-import { DEFAULT_PROFILE, DEFAULT_SEED, DEFAULT_THEME } from './defaults.ts';
-import type { Link, NewLink, Profile, ThemeSettings } from './types.ts';
+import { DEFAULT_BACKGROUND, DEFAULT_PROFILE, DEFAULT_SEED, DEFAULT_THEME } from './defaults.ts';
+import type { BackgroundSettings, Link, NewLink, Profile, ThemeSettings } from './types.ts';
+import {
+  isBackgroundAttachment,
+  isBackgroundPosition,
+  isBackgroundRepeat,
+  isBackgroundSize,
+} from './validate.ts';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS profile (
@@ -213,6 +219,29 @@ export function setSetting(db: DatabaseSync, key: string, value: string): void {
   ).run(key, value);
 }
 
+function getBackground(db: DatabaseSync, key: string): BackgroundSettings {
+  const imagePath = getSetting(db, `${key}.imagePath`);
+  const size = getSetting(db, `${key}.size`);
+  const position = getSetting(db, `${key}.position`);
+  const repeat = getSetting(db, `${key}.repeat`);
+  const attachment = getSetting(db, `${key}.attachment`);
+  return {
+    imagePath: imagePath !== undefined && imagePath.length > 0 ? imagePath : null,
+    size: isBackgroundSize(size) ? size : DEFAULT_BACKGROUND.size,
+    position: isBackgroundPosition(position) ? position : DEFAULT_BACKGROUND.position,
+    repeat: isBackgroundRepeat(repeat) ? repeat : DEFAULT_BACKGROUND.repeat,
+    attachment: isBackgroundAttachment(attachment) ? attachment : DEFAULT_BACKGROUND.attachment,
+  };
+}
+
+function saveBackground(db: DatabaseSync, key: string, bg: BackgroundSettings): void {
+  setSetting(db, `${key}.imagePath`, bg.imagePath ?? '');
+  setSetting(db, `${key}.size`, bg.size);
+  setSetting(db, `${key}.position`, bg.position);
+  setSetting(db, `${key}.repeat`, bg.repeat);
+  setSetting(db, `${key}.attachment`, bg.attachment);
+}
+
 export function getTheme(db: DatabaseSync): ThemeSettings {
   return {
     backgroundDark: getSetting(db, 'theme.backgroundDark') ?? DEFAULT_THEME.backgroundDark,
@@ -221,6 +250,8 @@ export function getTheme(db: DatabaseSync): ThemeSettings {
     textLight: getSetting(db, 'theme.textLight') ?? DEFAULT_THEME.textLight,
     accentColor: getSetting(db, 'theme.accentColor') ?? DEFAULT_THEME.accentColor,
     faviconPath: getSetting(db, 'theme.faviconPath') ?? DEFAULT_THEME.faviconPath,
+    backgroundImageDark: getBackground(db, 'theme.backgroundImageDark'),
+    backgroundImageLight: getBackground(db, 'theme.backgroundImageLight'),
   };
 }
 
@@ -231,6 +262,8 @@ export function saveTheme(db: DatabaseSync, theme: ThemeSettings): void {
   setSetting(db, 'theme.textLight', theme.textLight);
   setSetting(db, 'theme.accentColor', theme.accentColor);
   setSetting(db, 'theme.faviconPath', theme.faviconPath);
+  saveBackground(db, 'theme.backgroundImageDark', theme.backgroundImageDark);
+  saveBackground(db, 'theme.backgroundImageLight', theme.backgroundImageLight);
 }
 
 /**

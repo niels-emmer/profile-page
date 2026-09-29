@@ -13,8 +13,13 @@ HTTP routes, the SQLite schema, and the seed-file format.
 | `POST` | `/login` | public | Verify password; sets the session cookie; `302 /admin` |
 | `POST` | `/logout` | public | Clears the session cookie; `302 /login` |
 | `GET` | `/admin` | session | Admin editor |
-| `POST` | `/admin/profile` | session + CSRF | Save profile and theme |
+| `POST` | `/admin/profile` | session + CSRF | Save the profile and text colours (preserves favicon/background settings) |
 | `POST` | `/admin/avatar` | session + CSRF | Upload an avatar (multipart, max 6 MB body) |
+| `POST` | `/admin/favicon` | session + CSRF | Upload a favicon (multipart, max 6 MB body) |
+| `POST` | `/admin/favicon/remove` | session + CSRF | Reset the favicon to the bundled default |
+| `POST` | `/admin/background` | session + CSRF | Upload a background image for `theme=dark\|light` (multipart, max 9 MB body) |
+| `POST` | `/admin/background/remove` | session + CSRF | Remove the background image for `theme=dark\|light` |
+| `POST` | `/admin/background/options` | session + CSRF | Set size/position/repeat/attachment for `theme=dark\|light` |
 | `POST` | `/admin/links` | session + CSRF | Create a link, or update when `id` is present |
 | `POST` | `/admin/links/:id/delete` | session + CSRF | Delete a link |
 | `POST` | `/admin/links/reorder` | session + CSRF | Persist order from a comma-separated `order` field |
@@ -62,7 +67,10 @@ SQLite, opened with WAL mode and foreign keys on. Created on first run.
 ### `settings` (key/value)
 
 Theme values are stored under `theme.*` keys: `backgroundDark`, `backgroundLight`,
-`textDark`, `textLight`, `accentColor`, `faviconPath`.
+`textDark`, `textLight`, `accentColor`, `faviconPath`, and, per colour scheme,
+`theme.backgroundImageDark.*` / `theme.backgroundImageLight.*` with the sub-keys
+`imagePath`, `size`, `position`, `repeat`, and `attachment`. Adding these keys
+needs no schema migration — `settings` is a key/value table.
 
 ### `auth` (single row, `id = 1`)
 
@@ -75,17 +83,29 @@ Theme values are stored under `theme.*` keys: `backgroundDark`, `backgroundLight
 
 ## Theme value format
 
-`backgroundDark` / `backgroundLight` are raw CSS `background` values. They may be
-a colour, a gradient, or a local image shorthand:
+`backgroundDark` / `backgroundLight` are the base CSS `background` layer (a colour
+or gradient) shown beneath any background image. They are passed through
+`sanitizeCss`, which permits only `[a-zA-Z0-9#(),.%\s/-]`.
+
+Each colour scheme also has a `BackgroundSettings` object:
+
+| Field | Values | Default |
+|---|---|---|
+| `imagePath` | `/assets/uploads/...` or `null` | `null` |
+| `size` | `cover`, `contain`, `stretch`, `auto` | `cover` |
+| `position` | `center`, `top`, `bottom`, `left`, `right`, `top left`, `top right`, `bottom left`, `bottom right` | `center` |
+| `repeat` | `no-repeat`, `repeat` | `no-repeat` |
+| `attachment` | `scroll`, `fixed` | `scroll` |
+
+The renderer composes the final value, e.g.:
 
 ```
-radial-gradient(circle, #151826 28%, #0d0f18 100%)
-url(/assets/uploads/background.jpg) center/cover no-repeat fixed
+url(/assets/uploads/bg.webp) bottom right/contain repeat fixed, radial-gradient(circle, #151826 28%, #0d0f18 100%)
 ```
 
-Values are passed through `sanitizeCss`, which permits only
-`[a-zA-Z0-9#(),.%\s/-]`. External URLs are not usable (the `:` is stripped); use a
-local `/assets/uploads/` path.
+Every option is an enum, so no user-supplied string reaches the stylesheet except
+the validated asset path. `background-attachment: fixed` is unreliable on iOS
+Safari; `scroll` is the safe default.
 
 ## Seed file
 
@@ -102,7 +122,16 @@ idempotent and never overwrites existing content.
   "theme": {
     "backgroundDark": "...", "backgroundLight": "...",
     "textDark": "#ffffff", "textLight": "#222222",
-    "accentColor": "#0085ff", "faviconPath": "/assets/favicon.png"
+    "accentColor": "#0085ff", "faviconPath": "/assets/favicon.png",
+    "backgroundImageDark": {
+      "imagePath": "/assets/uploads/bg-dark.webp",
+      "size": "cover", "position": "center",
+      "repeat": "no-repeat", "attachment": "scroll"
+    },
+    "backgroundImageLight": {
+      "imagePath": null, "size": "cover", "position": "center",
+      "repeat": "no-repeat", "attachment": "scroll"
+    }
   },
   "links": [
     {
@@ -116,7 +145,8 @@ idempotent and never overwrites existing content.
 ```
 
 Image paths in a seed file refer to files under `DATA_DIR/uploads/`; the JSON and
-the uploads must travel together.
+the uploads must travel together. `backgroundImageDark` / `backgroundImageLight`
+are optional: older seed files without them are filled in with the defaults above.
 
 ## Backup archive format
 

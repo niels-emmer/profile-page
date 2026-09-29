@@ -1,8 +1,9 @@
 import { randomBytes } from 'node:crypto';
-import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { rmSync, writeFileSync } from 'node:fs';
+import { basename, join } from 'node:path';
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+export const MAX_BACKGROUND_BYTES = 8 * 1024 * 1024;
 
 export type ImageType = 'jpg' | 'png' | 'webp';
 
@@ -71,9 +72,15 @@ export interface SavedImage {
  * Validate and persist an uploaded image. The filename is generated, so the
  * client-supplied name can never influence the path.
  */
-export function saveImage(bytes: Uint8Array, uploadsDir: string): SavedImage {
+export function saveImage(
+  bytes: Uint8Array,
+  uploadsDir: string,
+  maxBytes: number = MAX_UPLOAD_BYTES,
+): SavedImage {
   if (bytes.length === 0) throw new UploadError('No file uploaded.');
-  if (bytes.length > MAX_UPLOAD_BYTES) throw new UploadError('Image exceeds the 5 MB limit.');
+  if (bytes.length > maxBytes) {
+    throw new UploadError(`Image exceeds the ${Math.round(maxBytes / (1024 * 1024))} MB limit.`);
+  }
   const type = detectImageType(bytes);
   if (type === undefined) {
     throw new UploadError('Unsupported image format. Use JPEG, PNG, or WebP.');
@@ -81,4 +88,16 @@ export function saveImage(bytes: Uint8Array, uploadsDir: string): SavedImage {
   const filename = `${randomBytes(16).toString('hex')}.${type}`;
   writeFileSync(join(uploadsDir, filename), bytes);
   return { path: `/assets/uploads/${filename}`, filename };
+}
+
+/**
+ * Delete a previously uploaded file. Only paths under `/assets/uploads/` with a
+ * plain basename are touched, so bundled assets and traversal attempts are
+ * ignored. Missing files are not an error.
+ */
+export function deleteUpload(uploadsDir: string, publicPath: string | null): void {
+  if (publicPath === null || !publicPath.startsWith('/assets/uploads/')) return;
+  const name = publicPath.slice('/assets/uploads/'.length);
+  if (name.length === 0 || basename(name) !== name) return;
+  rmSync(join(uploadsDir, name), { force: true });
 }
