@@ -292,7 +292,7 @@ function field(label: string, name: string, value: string, type = 'text'): strin
 }
 
 function colorField(label: string, name: string, value: string): string {
-  return `<label class="admin-field">${escapeHtml(label)}
+  return `<label class="admin-field admin-field--color">${escapeHtml(label)}
       <input type="color" name="${name}" value="${escapeHtml(value)}">
     </label>`;
 }
@@ -625,16 +625,24 @@ export function renderAdminPage(ctx: AdminContext): string {
 
   <section id="backup" class="admin-card">
     ${cardHeader('Backup & restore', 'Download everything — content, theme, and images — as a single .tar.gz, or restore a previous backup.')}
-    <div class="admin-actions">
-      <a class="admin-button admin-button--outline" href="/admin/backup">Download backup</a>
+    <div class="admin-subsection">
+      <h3 class="admin-subsection-title">Backup</h3>
+      <p class="admin-subsection-description">Download your profile, theme, links, and uploaded images as a single .tar.gz archive. Keep it somewhere safe.</p>
+      <div class="admin-actions">
+        <a class="admin-button admin-button--outline" href="/admin/backup">Download backup</a>
+      </div>
     </div>
-    <form method="post" action="/admin/restore" enctype="multipart/form-data" class="admin-form" data-confirm="Restoring will replace your current profile, theme, links, and images. Continue?">
-      <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
-      <label class="admin-field">Restore from a backup (.tar.gz)
-        <input type="file" name="archive" accept=".gz,.tar.gz,application/gzip" required>
-      </label>
-      <div class="admin-actions"><button type="submit" class="admin-button admin-button--danger">Restore backup</button></div>
-    </form>
+    <div class="admin-subsection">
+      <h3 class="admin-subsection-title">Restore</h3>
+      <p class="admin-subsection-description">Replace your current profile, theme, links, and images with a previous backup. This cannot be undone.</p>
+      <form method="post" action="/admin/restore" enctype="multipart/form-data" class="admin-form" data-confirm="Restoring will replace your current profile, theme, links, and images. Continue?">
+        <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
+        <label class="admin-field">Backup file (.tar.gz)
+          <input type="file" name="archive" accept=".gz,.tar.gz,application/gzip" required>
+        </label>
+        <div class="admin-actions"><button type="submit" class="admin-button admin-button--danger">Restore backup</button></div>
+      </form>
+    </div>
   </section>
 
     </div>
