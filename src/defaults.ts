@@ -28,6 +28,7 @@ export const DEFAULT_THEME: ThemeSettings = {
   textLight: '#222222',
   accentColor: '#0085ff',
   faviconPath: '/assets/favicon.png',
+  ogImagePath: null,
   backgroundImageDark: { ...DEFAULT_BACKGROUND },
   backgroundImageLight: { ...DEFAULT_BACKGROUND },
   defaultMode: 'system',

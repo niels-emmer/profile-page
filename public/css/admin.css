@@ -468,6 +468,26 @@ html {
   background: hsl(var(--background));
 }
 
+.admin-og-preview {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  aspect-ratio: 1200 / 630;
+  object-fit: cover;
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) - 2px);
+  margin-bottom: 1rem;
+}
+
+.admin-og-preview--empty {
+  display: grid;
+  place-items: center;
+  height: 8rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.8125rem;
+  background: hsl(var(--background));
+}
+
 /* ----------------------------- link cards ------------------------------ */
 
 .link-list {

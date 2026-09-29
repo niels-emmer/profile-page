@@ -74,6 +74,7 @@ Reuse these classes; do not invent new ones for the same job.
 | Collapsible | `.bg-section` / `.link-card` (`<details>`) | `▸` marker rotates on open; `<summary>` is the whole click target |
 | Link card | `.link-card`, `.link-title`, `.drag-handle` | Collapsed shows the link text + drag handle; expanded shows the editor |
 | Presets | `.preset-row`, `.preset` | Colour-scheme swatches that fill the nearest form |
+| Preview image | `.admin-og-preview` (+ `--empty`) | 1200×630 card preview; the **Generate** button renders the profile card on a canvas and uploads it (JS-only), with a plain file upload as the no-JS fallback |
 
 ### Decisions made (and why)
 

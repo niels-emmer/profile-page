@@ -38,6 +38,7 @@ const theme: ThemeSettings = {
   textLight: '#222222',
   accentColor: '#0085ff',
   faviconPath: '/assets/favicon.png',
+  ogImagePath: null,
   backgroundImageDark: { ...noBackground },
   backgroundImageLight: { ...noBackground },
   defaultMode: 'system',
@@ -132,6 +133,17 @@ test('renderProfilePage uses an uploaded avatar for the image and og:image', () 
   });
   assert.match(html, /src="\/assets\/uploads\/avatar\.jpg"/);
   assert.match(html, /og:image" content="https:\/\/example\.com\/assets\/uploads\/avatar\.jpg"/);
+});
+
+test('renderProfilePage prefers the preview image for og:image and twitter:image', () => {
+  const html = renderProfilePage({
+    profile,
+    links: [],
+    theme: { ...theme, ogImagePath: '/assets/uploads/preview.png' },
+    baseUrl: 'https://example.com',
+  });
+  assert.match(html, /og:image" content="https:\/\/example\.com\/assets\/uploads\/preview\.png"/);
+  assert.match(html, /twitter:image" content="https:\/\/example\.com\/assets\/uploads\/preview\.png"/);
 });
 
 test('renderProfilePage renders image and font-awesome icons', () => {
@@ -279,6 +291,7 @@ test('renderAdminPage includes every form and the saved banner', () => {
     theme,
     csrfToken: 'token-123',
     saved: true,
+    passwordManagedByEnv: false,
   });
   assert.match(html, /action="\/admin\/profile"/);
   assert.match(html, /action="\/admin\/theme"/);
@@ -288,6 +301,8 @@ test('renderAdminPage includes every form and the saved banner', () => {
   assert.match(html, /action="\/admin\/links"/);
   assert.match(html, /action="\/admin\/links\/1\/delete"/);
   assert.match(html, /action="\/admin\/links\/reorder"/);
+  assert.match(html, /action="\/admin\/ogimage"/);
+  assert.match(html, /action="\/admin\/password"/);
   assert.match(html, /Saved\./);
   assert.match(html, /GitHub/);
 });
@@ -303,6 +318,7 @@ test('renderAdminPage includes the favicon, background, and drag-reorder control
     },
     csrfToken: 'token-123',
     saved: false,
+    passwordManagedByEnv: false,
   });
   assert.match(html, /action="\/admin\/favicon"/);
   assert.match(html, /action="\/admin\/favicon\/remove"/);

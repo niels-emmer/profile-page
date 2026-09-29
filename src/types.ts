@@ -71,6 +71,8 @@ export interface ThemeSettings {
   textLight: string;
   accentColor: string;
   faviconPath: string;
+  /** Uploaded social preview image (1200×630), or null to fall back to the avatar. */
+  ogImagePath: string | null;
   backgroundImageDark: BackgroundSettings;
   backgroundImageLight: BackgroundSettings;
   /** The site default when a visitor has not chosen a theme themselves. */

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { gunzipSync, gzipSync } from 'node:zlib';
-import { deleteLink, ensureSeeded, getProfile, getTheme, listLinks } from '../src/db.ts';
+import { deleteLink, ensureSeeded, getAuth, getProfile, getTheme, listLinks } from '../src/db.ts';
+import { ensureAuth, verifyPassword } from '../src/auth.ts';
 import { createTar, readTar } from '../src/tar.ts';
 import { MAX_UPLOAD_BYTES } from '../src/upload.ts';
 import { FORM_HEADERS, cookieHeader, cookiesFrom, formBody, login, makeTestApp } from './helpers.ts';
@@ -426,6 +427,175 @@ test('logout rejects a missing CSRF token', async (t) => {
   assert.equal(res.status, 403);
 });
 
+test('admin can change the password and old sessions are invalidated', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS };
+
+  const res = await ctx.app.request('/admin/password', {
+    method: 'POST',
+    headers,
+    body: formBody({
+      csrf,
+      currentPassword: 'test-password',
+      newPassword: 'new-password-123',
+      confirmPassword: 'new-password-123',
+    }),
+  });
+  assert.equal(res.status, 302);
+
+  // The stored hash now verifies against the new password only.
+  const record = getAuth(ctx.db);
+  assert.ok(record !== undefined);
+  assert.ok(verifyPassword('new-password-123', record.passwordHash, record.passwordSalt));
+  assert.ok(!verifyPassword('test-password', record.passwordHash, record.passwordSalt));
+
+  // The old session is dead.
+  const oldAdmin = await ctx.app.request('/admin', { headers: { cookie: `session=${session}` } });
+  assert.equal(oldAdmin.status, 302);
+  assert.equal(oldAdmin.headers.get('location'), '/login');
+
+  // The response re-issued a session that works.
+  const newSession = cookiesFrom(res)['session'] ?? '';
+  assert.ok(newSession.length > 0);
+  const newAdmin = await ctx.app.request('/admin', { headers: { cookie: `session=${newSession}` } });
+  assert.equal(newAdmin.status, 200);
+
+  // The new password logs in.
+  const relogin = await login(ctx.app, 'new-password-123');
+  assert.equal(relogin.response.status, 302);
+});
+
+test('admin password change rejects a wrong current password', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS };
+
+  const res = await ctx.app.request('/admin/password', {
+    method: 'POST',
+    headers,
+    body: formBody({
+      csrf,
+      currentPassword: 'wrong',
+      newPassword: 'new-password-123',
+      confirmPassword: 'new-password-123',
+    }),
+  });
+  assert.equal(res.status, 302);
+  assert.match(res.headers.get('location') ?? '', /error=/);
+  const record = getAuth(ctx.db);
+  assert.ok(record !== undefined);
+  assert.ok(verifyPassword('test-password', record.passwordHash, record.passwordSalt));
+});
+
+test('admin password change rejects a short or mismatched new password', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS };
+
+  const short = await ctx.app.request('/admin/password', {
+    method: 'POST',
+    headers,
+    body: formBody({
+      csrf,
+      currentPassword: 'test-password',
+      newPassword: 'short',
+      confirmPassword: 'short',
+    }),
+  });
+  assert.equal(short.status, 302);
+  assert.match(short.headers.get('location') ?? '', /error=/);
+
+  const mismatch = await ctx.app.request('/admin/password', {
+    method: 'POST',
+    headers,
+    body: formBody({
+      csrf,
+      currentPassword: 'test-password',
+      newPassword: 'new-password-123',
+      confirmPassword: 'different-123',
+    }),
+  });
+  assert.equal(mismatch.status, 302);
+  assert.match(mismatch.headers.get('location') ?? '', /error=/);
+
+  const record = getAuth(ctx.db);
+  assert.ok(record !== undefined);
+  assert.ok(verifyPassword('test-password', record.passwordHash, record.passwordSalt));
+});
+
+test('ADMIN_PASSWORD wins over a UI password change on restart', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS };
+
+  const res = await ctx.app.request('/admin/password', {
+    method: 'POST',
+    headers,
+    body: formBody({
+      csrf,
+      currentPassword: 'test-password',
+      newPassword: 'ui-changed-123',
+      confirmPassword: 'ui-changed-123',
+    }),
+  });
+  assert.equal(res.status, 302);
+  const record = getAuth(ctx.db);
+  assert.ok(record !== undefined);
+  assert.ok(verifyPassword('ui-changed-123', record.passwordHash, record.passwordSalt));
+
+  // Simulate a restart: ensureAuth re-derives the env password.
+  ensureAuth(ctx.db, ctx.config);
+  const after = getAuth(ctx.db);
+  assert.ok(after !== undefined);
+  assert.ok(verifyPassword('test-password', after.passwordHash, after.passwordSalt));
+  assert.ok(!verifyPassword('ui-changed-123', after.passwordHash, after.passwordSalt));
+});
+
+test('password change rate limit trips after repeated wrong attempts', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = {
+    cookie: `session=${session}; csrf=${csrf}`,
+    'x-forwarded-for': '203.0.113.9',
+    ...FORM_HEADERS,
+  };
+
+  for (let attempt = 1; attempt <= 10; attempt += 1) {
+    const res = await ctx.app.request('/admin/password', {
+      method: 'POST',
+      headers,
+      body: formBody({
+        csrf,
+        currentPassword: 'wrong',
+        newPassword: 'new-password-123',
+        confirmPassword: 'new-password-123',
+      }),
+    });
+    assert.equal(res.status, 302, `attempt ${attempt}`);
+  }
+  const blocked = await ctx.app.request('/admin/password', {
+    method: 'POST',
+    headers,
+    body: formBody({
+      csrf,
+      currentPassword: 'test-password',
+      newPassword: 'new-password-123',
+      confirmPassword: 'new-password-123',
+    }),
+  });
+  assert.equal(blocked.status, 302);
+  assert.match(blocked.headers.get('location') ?? '', /Too%20many%20attempts/);
+  const record = getAuth(ctx.db);
+  assert.ok(record !== undefined);
+  assert.ok(verifyPassword('test-password', record.passwordHash, record.passwordSalt));
+});
+
 test('admin can upload an avatar and it is served', async (t) => {
   const ctx = makeTestApp();
   t.after(() => ctx.cleanup());
@@ -467,6 +637,68 @@ test('admin avatar upload rejects a non-image and an oversized file', async (t) 
   assert.match(tooBig.headers.get('location') ?? '', /error=/);
 
   assert.equal(getProfile(ctx.db).avatarPath, null);
+});
+
+test('admin can upload a preview image and it is used for og:image', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}` };
+
+  const form = new FormData();
+  form.set('csrf', csrf);
+  form.set('ogimage', new File([PNG], 'preview.png', { type: 'image/png' }));
+  const uploaded = await ctx.app.request('/admin/ogimage', { method: 'POST', headers, body: form });
+  assert.equal(uploaded.status, 302);
+
+  const ogPath = getTheme(ctx.db).ogImagePath;
+  assert.ok(ogPath !== null && ogPath.startsWith('/assets/uploads/'));
+  assert.equal((await ctx.app.request(ogPath)).status, 200);
+
+  const html = await (await ctx.app.request('/')).text();
+  assert.ok(html.includes(`og:image" content="http://localhost${ogPath}`));
+  assert.ok(html.includes(`twitter:image" content="http://localhost${ogPath}`));
+});
+
+test('admin can remove the preview image and og:image falls back to the avatar', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}` };
+
+  const form = new FormData();
+  form.set('csrf', csrf);
+  form.set('ogimage', new File([PNG], 'preview.png', { type: 'image/png' }));
+  await ctx.app.request('/admin/ogimage', { method: 'POST', headers, body: form });
+  const ogPath = getTheme(ctx.db).ogImagePath;
+  assert.ok(ogPath !== null);
+
+  const removed = await ctx.app.request('/admin/ogimage/remove', {
+    method: 'POST',
+    headers: { ...headers, ...FORM_HEADERS },
+    body: formBody({ csrf }),
+  });
+  assert.equal(removed.status, 302);
+  assert.equal(getTheme(ctx.db).ogImagePath, null);
+  assert.equal((await ctx.app.request(ogPath)).status, 404);
+
+  const html = await (await ctx.app.request('/')).text();
+  assert.ok(html.includes('og:image" content="http://localhost/assets/default-avatar.svg'));
+});
+
+test('admin preview image upload rejects a non-image', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}` };
+
+  const form = new FormData();
+  form.set('csrf', csrf);
+  form.set('ogimage', new File([Buffer.from('not an image')], 'x.png', { type: 'image/png' }));
+  const rejected = await ctx.app.request('/admin/ogimage', { method: 'POST', headers, body: form });
+  assert.equal(rejected.status, 302);
+  assert.match(rejected.headers.get('location') ?? '', /error=/);
+  assert.equal(getTheme(ctx.db).ogImagePath, null);
 });
 
 test('admin can upload and remove a favicon', async (t) => {
@@ -619,7 +851,7 @@ test('new admin image routes reject a missing CSRF token', async (t) => {
   const ctx = makeTestApp();
   t.after(() => ctx.cleanup());
   const { session } = await login(ctx.app);
-  for (const path of ['/admin/favicon', '/admin/favicon/remove', '/admin/background', '/admin/background/remove', '/admin/background/options']) {
+  for (const path of ['/admin/favicon', '/admin/favicon/remove', '/admin/background', '/admin/background/remove', '/admin/background/options', '/admin/ogimage', '/admin/ogimage/remove', '/admin/password']) {
     const res = await ctx.app.request(path, {
       method: 'POST',
       headers: { cookie: `session=${session}`, ...FORM_HEADERS },

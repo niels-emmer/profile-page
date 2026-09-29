@@ -230,6 +230,12 @@ export function setSetting(db: DatabaseSync, key: string, value: string): void {
   ).run(key, value);
 }
 
+/** A stored setting as a nullable string: missing or empty becomes null. */
+function nullableSetting(db: DatabaseSync, key: string): string | null {
+  const value = getSetting(db, key);
+  return value !== undefined && value.length > 0 ? value : null;
+}
+
 function getBackground(db: DatabaseSync, key: string): BackgroundSettings {
   const imagePath = getSetting(db, `${key}.imagePath`);
   const size = getSetting(db, `${key}.size`);
@@ -269,6 +275,7 @@ export function getTheme(db: DatabaseSync): ThemeSettings {
     textLight: getSetting(db, 'theme.textLight') ?? DEFAULT_THEME.textLight,
     accentColor: getSetting(db, 'theme.accentColor') ?? DEFAULT_THEME.accentColor,
     faviconPath: getSetting(db, 'theme.faviconPath') ?? DEFAULT_THEME.faviconPath,
+    ogImagePath: nullableSetting(db, 'theme.ogImagePath'),
     backgroundImageDark: getBackground(db, 'theme.backgroundImageDark'),
     backgroundImageLight: getBackground(db, 'theme.backgroundImageLight'),
     defaultMode: isThemeMode(defaultMode) ? defaultMode : DEFAULT_THEME.defaultMode,
@@ -283,6 +290,7 @@ export function saveTheme(db: DatabaseSync, theme: ThemeSettings): void {
   setSetting(db, 'theme.textLight', theme.textLight);
   setSetting(db, 'theme.accentColor', theme.accentColor);
   setSetting(db, 'theme.faviconPath', theme.faviconPath);
+  setSetting(db, 'theme.ogImagePath', theme.ogImagePath ?? '');
   setSetting(db, 'theme.defaultMode', theme.defaultMode);
   setSetting(db, 'theme.visitorToggle', theme.visitorToggle ? 'true' : 'false');
   saveBackground(db, 'theme.backgroundImageDark', theme.backgroundImageDark);

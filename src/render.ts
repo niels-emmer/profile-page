@@ -1,4 +1,4 @@
-import { COLOR_SCHEMES } from './colors.ts';
+import { COLOR_SCHEMES, readableTextColor } from './colors.ts';
 import type {
   BackgroundPosition,
   BackgroundSettings,
@@ -134,6 +134,8 @@ export function renderProfilePage(ctx: PageContext): string {
   const { profile, links, theme, baseUrl } = ctx;
   const avatar = profile.avatarPath ?? '/assets/default-avatar.svg';
   const avatarUrl = avatarUrlFor(profile, baseUrl);
+  // The social preview card when one has been generated; otherwise the avatar.
+  const ogImageUrl = theme.ogImagePath !== null ? `${baseUrl}${theme.ogImagePath}` : avatarUrl;
   const description = `${profile.tagline} ${profile.description}`.trim();
 
   // schema.org Person, for rich results and AI answer engines. `<` is escaped
@@ -181,11 +183,11 @@ export function renderProfilePage(ctx: PageContext): string {
 <meta property="og:type" content="website">
 <meta property="og:title" content="${escapeHtml(profile.name)}">
 <meta property="og:description" content="${escapeHtml(description)}">
-<meta property="og:image" content="${escapeHtml(avatarUrl)}">
+<meta property="og:image" content="${escapeHtml(ogImageUrl)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${escapeHtml(profile.name)}">
 <meta name="twitter:description" content="${escapeHtml(description)}">
-<meta name="twitter:image" content="${escapeHtml(avatarUrl)}">
+<meta name="twitter:image" content="${escapeHtml(ogImageUrl)}">
 <title>${escapeHtml(profile.name)}</title>
 <link rel="canonical" href="${escapeHtml(baseUrl)}/">
 <link rel="alternate" type="text/vcard" href="/contact.vcf">
@@ -306,6 +308,8 @@ export interface AdminContext {
   csrfToken: string;
   saved: boolean;
   error?: string;
+  /** True when ADMIN_PASSWORD is set, so a UI password change is temporary. */
+  passwordManagedByEnv: boolean;
 }
 
 function field(label: string, name: string, value: string, type = 'text'): string {
@@ -401,6 +405,46 @@ function faviconSection(theme: ThemeSettings, csrfToken: string): string {
         <span>Favicon image (JPEG, PNG, WebP; max 5 MB)</span>
         <div class="admin-file-row">
           <input type="file" name="favicon" accept="image/jpeg,image/png,image/webp" required>
+          <button type="submit" class="admin-button">Upload</button>
+          ${removeButton}
+        </div>
+      </div>
+    </form>
+    ${removeForm}
+  </section>`;
+}
+
+function previewSection(theme: ThemeSettings, profile: Profile, csrfToken: string): string {
+  const ogPath = theme.ogImagePath;
+  const preview = ogPath !== null
+    ? `<img class="admin-og-preview" src="${escapeHtml(ogPath)}" alt="Current preview image">`
+    : '<div class="admin-og-preview admin-og-preview--empty">No preview image yet</div>';
+  const removeButton = ogPath !== null
+    ? '<button type="submit" form="ogimage-remove" class="admin-button admin-button--danger">Remove</button>'
+    : '';
+  const removeForm = ogPath !== null
+    ? `<form id="ogimage-remove" method="post" action="/admin/ogimage/remove" data-confirm="Remove the preview image?">
+      <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
+    </form>`
+    : '';
+  return `<section id="preview" class="admin-card">
+    ${cardHeader('Preview image', 'The card shown when your page is shared on Discord, Slack, or Twitter. 1200×630.')}
+    ${preview}
+    <div class="admin-actions">
+      <button type="button" class="admin-button" data-generate-og
+        data-csrf="${escapeHtml(csrfToken)}"
+        data-accent="${escapeHtml(theme.accentColor)}"
+        data-text-color="${escapeHtml(readableTextColor(theme.accentColor))}"
+        data-name="${escapeHtml(profile.name)}"
+        data-tagline="${escapeHtml(profile.tagline)}"
+        data-avatar="${escapeHtml(profile.avatarPath ?? '/assets/default-avatar.svg')}">Generate</button>
+    </div>
+    <form method="post" action="/admin/ogimage" enctype="multipart/form-data" class="admin-form">
+      <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
+      <div class="admin-field">
+        <span>Or upload your own image (JPEG, PNG, WebP; max 5 MB)</span>
+        <div class="admin-file-row">
+          <input type="file" name="ogimage" accept="image/jpeg,image/png,image/webp" required>
           <button type="submit" class="admin-button">Upload</button>
           ${removeButton}
         </div>
@@ -554,8 +598,25 @@ function renderLinkEditor(link: Link, index: number, links: Link[], csrfToken: s
 </details>`;
 }
 
+function securitySection(csrfToken: string, passwordManagedByEnv: boolean): string {
+  const note = passwordManagedByEnv
+    ? '<p class="admin-muted">The password is managed by the ADMIN_PASSWORD environment variable and will be restored on restart, which also signs out all sessions.</p>'
+    : '';
+  return `<section id="security" class="admin-card">
+    ${cardHeader('Security', 'Change your admin password. All other sessions are signed out.')}
+    ${note}
+    <form method="post" action="/admin/password" class="admin-form">
+      <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
+      ${field('Current password', 'currentPassword', '', 'password')}
+      ${field('New password (min 8 characters)', 'newPassword', '', 'password')}
+      ${field('Confirm new password', 'confirmPassword', '', 'password')}
+      <div class="admin-actions"><button type="submit" class="admin-button">Change password</button></div>
+    </form>
+  </section>`;
+}
+
 export function renderAdminPage(ctx: AdminContext): string {
-  const { profile, links, theme, csrfToken, saved, error } = ctx;
+  const { profile, links, theme, csrfToken, saved, error, passwordManagedByEnv } = ctx;
   const avatar = profile.avatarPath ?? '/assets/default-avatar.svg';
   const banner = saved ? '<p class="admin-ok">Saved.</p>' : '';
   const errorBanner = error !== undefined ? `<p class="admin-error">${escapeHtml(error)}</p>` : '';
@@ -598,10 +659,12 @@ export function renderAdminPage(ctx: AdminContext): string {
         <a class="admin-nav-link" href="#profile">Profile</a>
         <a class="admin-nav-link" href="#theme">Theme</a>
         <a class="admin-nav-link" href="#avatar">Avatar</a>
+        <a class="admin-nav-link" href="#preview">Preview</a>
         <a class="admin-nav-link" href="#favicon">Favicon</a>
         <a class="admin-nav-link" href="#background">Background</a>
         <a class="admin-nav-link" href="#links">Links</a>
         <a class="admin-nav-link" href="#backup">Backup</a>
+        <a class="admin-nav-link" href="#security">Security</a>
       </nav>
     </aside>
     <div class="admin-content">
@@ -635,6 +698,8 @@ export function renderAdminPage(ctx: AdminContext): string {
       </div>
     </form>
   </section>
+
+  ${previewSection(theme, profile, csrfToken)}
 
   ${faviconSection(theme, csrfToken)}
 
@@ -700,6 +765,8 @@ export function renderAdminPage(ctx: AdminContext): string {
       </form>
     </div>
   </section>
+
+  ${securitySection(csrfToken, passwordManagedByEnv)}
 
     </div>
   </div>
