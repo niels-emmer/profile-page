@@ -4,25 +4,28 @@
 
 - Docker with Compose, or Node.js >= 24 for a local run.
 - A reverse proxy that terminates TLS (e.g. Nginx Proxy Manager, Caddy, Traefik).
-- An external Docker network named `proxy-net` shared with the proxy.
+- An external Docker network shared with the proxy, named in `PROXY_NETWORK`
+  (default `proxy-net`).
 
 ## Docker
 
 ```bash
 git clone <repo> profile-page && cd profile-page
 cp .env.example .env
+# set PROXY_NETWORK in .env to the Docker network your reverse proxy is on
 docker compose up -d --build
 # First run: sign in at /admin with the bootstrap password "changeme" — you
 # will be asked to pick your own secure password.
 ```
 
-The container joins `proxy-net` and listens on port `3000`. No ports are
-published. Point the reverse proxy at `http://profile-page:3000`.
+The container joins the external network named in `PROXY_NETWORK` and listens on
+port `3000`. No ports are published. Point the reverse proxy at
+`http://profile-page:3000`.
 
 Create the network once if it does not exist:
 
 ```bash
-docker network create proxy-net
+docker network create <name>   # the name you set in PROXY_NETWORK
 ```
 
 ### Reverse proxy (Nginx)

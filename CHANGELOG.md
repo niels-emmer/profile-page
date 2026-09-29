@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The reverse-proxy Docker network is now configurable via `PROXY_NETWORK` in
+  `.env` (default `proxy-net`) instead of being hardcoded in
+  `docker-compose.yml` — the quick start no longer assumes a network named
+  `proxy-net`.
+
 ### Added
 
 - **Bootstrap password flow**: a fresh install starts with the password

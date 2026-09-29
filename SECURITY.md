@@ -93,7 +93,8 @@ There are no inline scripts — `script-src 'self'` is strict.
 - Runs as the non-root `node` user (uid 1000).
 - `read_only: true` root filesystem, with a writable `/data` volume and tmpfs `/tmp`.
 - `cap_drop: ALL`, `no-new-privileges: true`.
-- No published ports; reachable only on the external `proxy-net` network.
+- No published ports; reachable only on the external network named in
+  `PROXY_NETWORK` (default `proxy-net`).
 - Healthcheck on `/health`.
 
 ## Accepted risks

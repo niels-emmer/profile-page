@@ -29,3 +29,6 @@ services:
 networks:
   proxy-net:
     external: true
+    # The actual Docker network name. Set PROXY_NETWORK in .env to the network
+    # your reverse proxy is attached to (default: proxy-net).
+    name: ${PROXY_NETWORK:-proxy-net}
