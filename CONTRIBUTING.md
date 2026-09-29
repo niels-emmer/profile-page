@@ -33,15 +33,21 @@ npm test
 
 ## Guidelines
 
+The full rulebook is in [docs/governance/](docs/governance/) — start with
+[invariants.md](docs/governance/invariants.md). The essentials:
+
 - **No new runtime dependencies** without a strong justification. The project
   ships with exactly two (`hono`, `@hono/node-server`) and would like to keep it
   that way. Prefer the Node standard library.
 - **Match the existing style.** TypeScript is strict (`noUncheckedIndexedAccess`,
-  `exactOptionalPropertyTypes`, `erasableSyntaxOnly`); keep it that way.
-- **Add tests** for behaviour changes. The suite uses `node:test`.
+  `exactOptionalPropertyTypes`, `erasableSyntaxOnly`); keep it that way. See
+  [style-guide.md](docs/governance/style-guide.md).
+- **Add tests** for behaviour changes. The suite uses `node:test` — see
+  [testing.md](docs/governance/testing.md).
 - **Never commit personal data or secrets.** Profile content lives in the
   gitignored `data/` directory.
-- **One concern per commit**, with a clear message.
+- **One concern per commit**, with a clear message — see
+  [workflow.md](docs/governance/workflow.md).
 
 ## Pull requests
 
