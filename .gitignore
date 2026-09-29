@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Local data: SQLite database and uploaded files (personal content).
+# The directory is kept in git, its contents are not.
+data/*
+!data/.gitkeep
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# SQLite artifacts
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Logs, OS cruft, coverage
+*.log
+.DS_Store
+coverage/

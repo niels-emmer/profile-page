@@ -1,0 +1,31 @@
+{
+  "profile": {
+    "name": "Your Name",
+    "tagline": "Your tagline",
+    "description": "A short description about you.",
+    "avatarPath": "/assets/uploads/avatar.jpg"
+  },
+  "theme": {
+    "backgroundDark": "radial-gradient(circle, #151826 28%, #0d0f18 100%)",
+    "backgroundLight": "#ffffff",
+    "textDark": "#ffffff",
+    "textLight": "#222222",
+    "accentColor": "#0085ff",
+    "faviconPath": "/assets/favicon.png"
+  },
+  "links": [
+    {
+      "text": "Example",
+      "url": "https://example.com",
+      "newWindow": true,
+      "iconType": "fa",
+      "iconValue": "fa-solid fa-link",
+      "iconColor": null,
+      "textColor": "#ffffff",
+      "colorMode": "solid",
+      "colorFrom": "#0085ff",
+      "colorTo": "#0085ff",
+      "borderColor": null
+    }
+  ]
+}

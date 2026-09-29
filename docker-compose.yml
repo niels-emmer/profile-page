@@ -1,0 +1,31 @@
+services:
+  profile-page:
+    build: .
+    image: profile-page:latest
+    container_name: profile-page
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # SQLite database and uploaded files live here. Back this up.
+      - ./data:/data
+    networks:
+      - proxy-net
+    # No ports are published. Reach the app from your reverse proxy as
+    # http://profile-page:3000 (container name : port) on the proxy-net network.
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 128M
+
+networks:
+  proxy-net:
+    external: true

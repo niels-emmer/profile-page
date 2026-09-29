@@ -1,0 +1,25 @@
+{
+  "name": "profile-page",
+  "version": "0.1.0",
+  "description": "Minimal self-hosted single-user profile page with an online admin editor.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node src/server.ts",
+    "dev": "node --watch src/server.ts",
+    "seed": "node src/seed.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.2",
+    "hono": "4.13.10"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.0",
+    "typescript": "5.9.3"
+  }
+}
