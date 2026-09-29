@@ -299,6 +299,42 @@ export function renderLoginPage(csrfToken: string, error?: string): string {
 `;
 }
 
+/** Forced password change after the first login with the bootstrap password. */
+export function renderSetPasswordPage(csrfToken: string, error?: string): string {
+  const banner = error !== undefined ? `<p class="admin-error">${escapeHtml(error)}</p>` : '';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Set your password</title>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="/assets/css/admin.css">
+</head>
+<body class="admin-body">
+<main class="admin-card admin-card--narrow">
+  <div class="admin-card-header">
+    <h1 class="admin-title">Set your password</h1>
+    <p class="admin-card-description">You are using the default password. Choose a secure one to continue.</p>
+  </div>
+  ${banner}
+  <form method="post" action="/admin/set-password" class="admin-form">
+    <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
+    <label class="admin-field">New password (min 8 characters)
+      <input type="password" name="newPassword" autocomplete="new-password" required autofocus>
+    </label>
+    <label class="admin-field">Confirm new password
+      <input type="password" name="confirmPassword" autocomplete="new-password" required>
+    </label>
+    <button type="submit" class="admin-button">Set password</button>
+  </form>
+</main>
+</body>
+</html>
+`;
+}
+
 /* ------------------------------- admin page ---------------------------- */
 
 export interface AdminContext {

@@ -22,12 +22,19 @@ export interface TestApp {
  * default demo profile unless `seed: false` is passed.
  */
 export function makeTestApp(
-  options: { password?: string; secureCookies?: boolean; seed?: boolean } = {},
+  options: {
+    password?: string;
+    secureCookies?: boolean;
+    seed?: boolean;
+    /** Omit ADMIN_PASSWORD so ensureAuth uses the 'changeme' bootstrap password. */
+    noEnvPassword?: boolean;
+  } = {},
 ): TestApp {
   const dir = mkdtempSync(join(tmpdir(), 'pp-test-'));
   const config = loadConfig({
     DATA_DIR: dir,
-    ADMIN_PASSWORD: options.password ?? 'test-password',
+    ADMIN_PASSWORD:
+      options.noEnvPassword === true ? undefined : (options.password ?? 'test-password'),
     SECURE_COOKIES: options.secureCookies === true ? 'true' : 'false',
   });
   const db = openDatabase(config);

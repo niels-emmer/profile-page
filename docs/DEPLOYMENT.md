@@ -11,9 +11,9 @@
 ```bash
 git clone <repo> profile-page && cd profile-page
 cp .env.example .env
-# optional: set ADMIN_PASSWORD in .env; otherwise one is generated on first run
 docker compose up -d --build
-docker compose logs profile-page   # first-run password is printed here if generated
+# First run: sign in at /admin with the bootstrap password "changeme" — you
+# will be asked to pick your own secure password.
 ```
 
 The container joins `proxy-net` and listens on port `3000`. No ports are
@@ -55,10 +55,23 @@ All configuration is via environment variables (see `.env.example`).
 |---|---|---|
 | `PORT` | `3000` | Listen port |
 | `DATA_DIR` | `./data` (`/data` in Docker) | SQLite database + uploads |
-| `ADMIN_PASSWORD` | *(generated)* | Admin password. If unset, a random one is generated on first run and logged once. |
 | `SESSION_SECRET` | *(generated)* | Cookie signing secret. Generated and persisted if unset. |
 | `SECURE_COOKIES` | `true` in production | Adds the `Secure` flag to session cookies. Set `false` only for plain-HTTP local development. |
 | `BASE_URL` | *(request host)* | Public base URL for meta tags. |
+
+The admin password is **not** an environment variable. A fresh install starts
+with the bootstrap password `changeme` and the first visit to `/admin` forces a
+change. Forgot it? Reset from the container, then restart so the app picks it up
+(this also signs out every session):
+
+```bash
+docker exec -it profile-page node src/reset-password.ts
+docker compose restart profile-page
+# resets to "changeme" — log in and you will be asked to set a new one
+# or pick the new password directly:
+docker exec -it profile-page node src/reset-password.ts 'my-new-password'
+docker compose restart profile-page
+```
 
 ## Data and backups
 

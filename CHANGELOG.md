@@ -8,6 +8,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Bootstrap password flow**: a fresh install starts with the password
+  `changeme` and the first visit to `/admin` forces you to pick a secure one
+  (`/admin/set-password`). `ADMIN_PASSWORD` is no longer part of the default
+  setup — the password is managed from the UI.
+- **Password reset script** (`src/reset-password.ts`): reset a forgotten admin
+  password from the container (`docker exec -it profile-page node
+  src/reset-password.ts`), then restart. Also signs out every session.
+- `Cache-Control: no-cache` on `/assets/*` so browsers revalidate JS/CSS after
+  a deploy instead of serving a stale `admin.js` (which made new buttons
+  silently do nothing).
+- The preview-image **Generate** button now shows "Generating…" while it works
+  and can never hang on font loading.
+
+### Fixed
+
+- Admin **Preview image** Generate button: the deployed `admin.js` could be
+  served from the browser cache after an upgrade, so the button appeared to do
+  nothing. Cache revalidation + visible feedback fix this.
+
+### Added
+
 - Admin **Preview image** section: a **Generate** button renders a 1200×630
   social preview card (avatar, name, and tagline on the accent colour) in the
   browser and uploads it; the public page emits it as `og:image` /

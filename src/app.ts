@@ -14,6 +14,7 @@ import {
   csrfMatches,
   generateCsrfToken,
   hashPassword,
+  isDefaultPassword,
   verifyPassword,
   verifySessionToken,
 } from './auth.ts';
@@ -41,6 +42,7 @@ import {
   renderLoginPage,
   renderProfilePage,
   renderRobotsTxt,
+  renderSetPasswordPage,
   renderSitemap,
 } from './render.ts';
 import type { BackgroundSettings, NewLink, ThemeSettings } from './types.ts';
@@ -203,10 +205,41 @@ export function createApp(deps: AppDeps): Hono {
   /** Gate every /admin route before any body is read. */
   const authGuard = async (c: Context, next: () => Promise<void>): Promise<Response | void> => {
     if (!isAuthenticated(c)) return c.redirect('/login');
+    // First login with the bootstrap password: force a password change before
+    // anything else. The password routes themselves stay reachable.
+    if (isDefaultPassword(auth)) {
+      const path = c.req.path;
+      if (path !== '/admin/set-password' && path !== '/admin/password') {
+        return c.redirect('/admin/set-password');
+      }
+    }
     await next();
   };
   app.use('/admin', authGuard);
   app.use('/admin/*', authGuard);
+
+  /**
+   * Persist a new password, rotate the session secret (signing out every other
+   * session), and re-issue the current session so the user stays logged in.
+   */
+  function applyPasswordChange(c: Context, next: string): void {
+    const salt = randomBytes(16).toString('hex');
+    const rotatedSecret = randomBytes(32).toString('hex');
+    const hash = hashPassword(next, salt);
+    saveAuth(db, { passwordHash: hash, passwordSalt: salt, sessionSecret: rotatedSecret });
+    // The in-memory record is what the session guard and login check; keep it
+    // in sync so the change takes effect immediately.
+    auth.passwordHash = hash;
+    auth.passwordSalt = salt;
+    auth.sessionSecret = rotatedSecret;
+    setCookie(c, SESSION_COOKIE, createSessionToken(rotatedSecret), {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Lax',
+      secure: config.secureCookies,
+      maxAge: SESSION_TTL_SECONDS,
+    });
+  }
 
   function parseLinkForm(body: Record<string, unknown>): NewLink {
     return {
@@ -353,27 +386,38 @@ export function createApp(deps: AppDeps): Hono {
       return c.redirect('/admin?error=' + encodeURIComponent('New passwords do not match'));
     }
 
-    // Rotate the session secret so every other session is invalidated, exactly
-    // as ensureAuth does when ADMIN_PASSWORD changes at boot.
-    const salt = randomBytes(16).toString('hex');
-    const rotatedSecret = randomBytes(32).toString('hex');
-    const hash = hashPassword(next, salt);
-    saveAuth(db, { passwordHash: hash, passwordSalt: salt, sessionSecret: rotatedSecret });
-    // The in-memory record is what the session guard and login check; keep it
-    // in sync so the change takes effect immediately.
-    auth.passwordHash = hash;
-    auth.passwordSalt = salt;
-    auth.sessionSecret = rotatedSecret;
+    applyPasswordChange(c, next);
     passwordLimiter.reset(ip);
+    return c.redirect('/admin?ok=1');
+  });
 
-    // Re-issue the current session under the new secret so the user stays in.
-    setCookie(c, SESSION_COOKIE, createSessionToken(rotatedSecret), {
-      path: '/',
-      httpOnly: true,
-      sameSite: 'Lax',
-      secure: config.secureCookies,
-      maxAge: SESSION_TTL_SECONDS,
-    });
+  app.get('/admin/set-password', (c) => {
+    // Once the password is changed, this page is no longer needed.
+    if (!isDefaultPassword(auth)) return c.redirect('/admin');
+    const error = c.req.query('error');
+    return c.html(renderSetPasswordPage(ensureCsrf(c), error));
+  });
+
+  app.post('/admin/set-password', async (c) => {
+    const body = await c.req.parseBody();
+    if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
+    // Only reachable while the bootstrap password is still in use.
+    if (!isDefaultPassword(auth)) return c.redirect('/admin');
+
+    const next = formField(body, 'newPassword');
+    const confirm = formField(body, 'confirmPassword');
+    if (next.trim().length < 8) {
+      return c.redirect(
+        '/admin/set-password?error=' + encodeURIComponent('New password must be at least 8 characters'),
+      );
+    }
+    if (next !== confirm) {
+      return c.redirect(
+        '/admin/set-password?error=' + encodeURIComponent('New passwords do not match'),
+      );
+    }
+
+    applyPasswordChange(c, next);
     return c.redirect('/admin?ok=1');
   });
 
@@ -649,6 +693,14 @@ export function createApp(deps: AppDeps): Hono {
   );
 
   /* -------------------------------- assets ------------------------------- */
+
+  // Assets are unversioned (no content hash in the URL), so force revalidation
+  // — otherwise a browser can keep serving a stale admin.js/theme.js after a
+  // deploy and new buttons/behaviour silently do nothing.
+  app.use('/assets/*', async (c, next) => {
+    c.header('Cache-Control', 'no-cache');
+    await next();
+  });
 
   // Uploaded files first: /assets/uploads/... -> <DATA_DIR>/uploads/...
   app.use('/assets/uploads/*', async (c, next) => {
