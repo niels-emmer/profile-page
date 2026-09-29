@@ -24,7 +24,7 @@ HTTP routes, the SQLite schema, and the seed-file format.
 | `POST` | `/admin/avatar` | session + CSRF | Upload an avatar (multipart, max 6 MB body) |
 | `POST` | `/admin/ogimage` | session + CSRF | Upload the social preview image (multipart, max 6 MB body) |
 | `POST` | `/admin/ogimage/remove` | session + CSRF | Remove the preview image; `og:image` falls back to the avatar |
-| `POST` | `/admin/icon` | session + CSRF | Upload a link icon; returns `{"path": "/assets/uploads/..."}` as JSON so the admin JS can fill the icon path field. Drops the previously referenced upload when `oldPath` is sent. |
+| `POST` | `/admin/icon` | session + CSRF | Upload a link icon; returns `{"path": "/assets/uploads/..."}` as JSON so the admin JS can fill the icon path field. The previous icon is not deleted (links may share one). |
 | `POST` | `/admin/favicon` | session + CSRF | Upload a favicon (multipart, max 6 MB body) |
 | `POST` | `/admin/favicon/remove` | session + CSRF | Reset the favicon to the bundled default |
 | `POST` | `/admin/background` | session + CSRF | Upload a background image for `theme=dark\|light` (multipart, max 9 MB body) |

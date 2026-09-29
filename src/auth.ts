@@ -97,7 +97,8 @@ export class RateLimiter {
 
   #prune(key: string, now: number): number[] {
     const events = (this.#events.get(key) ?? []).filter((at) => now - at < this.#windowMs);
-    this.#events.set(key, events);
+    if (events.length === 0) this.#events.delete(key);
+    else this.#events.set(key, events);
     return events;
   }
 }

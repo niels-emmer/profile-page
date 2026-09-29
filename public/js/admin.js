@@ -415,8 +415,6 @@ document.addEventListener('change', async (event) => {
     const data = new FormData();
     data.set('csrf', csrf.value);
     data.set('icon', processed, processed.name);
-    const oldPath = pathField.value;
-    if (oldPath.startsWith('/assets/uploads/')) data.set('oldPath', oldPath);
     const response = await fetch('/admin/icon', { method: 'POST', body: data });
     const result = await response.json().catch(() => ({}));
     if (!response.ok || typeof result.path !== 'string') {
