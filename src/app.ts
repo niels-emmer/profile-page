@@ -17,11 +17,13 @@ import {
 } from './auth.ts';
 import { BackupError, MAX_ARCHIVE_BYTES, buildBackup, restoreBackup } from './backup.ts';
 import type { Config } from './config.ts';
+import { renderContactJson, renderVCard, renderWebFinger, vcardSlug } from './contact.ts';
 import { DEFAULT_THEME } from './defaults.ts';
 import {
   createLink,
   deleteLink,
   getProfile,
+  getProfileUpdatedAt,
   getTheme,
   listLinks,
   reorderLinks,
@@ -30,7 +32,14 @@ import {
   updateLink,
   type AuthRecord,
 } from './db.ts';
-import { renderAdminPage, renderLoginPage, renderProfilePage } from './render.ts';
+import {
+  renderAdminPage,
+  renderLlmsTxt,
+  renderLoginPage,
+  renderProfilePage,
+  renderRobotsTxt,
+  renderSitemap,
+} from './render.ts';
 import type { BackgroundSettings, NewLink, ThemeSettings } from './types.ts';
 import { MAX_BACKGROUND_BYTES, UploadError, deleteUpload, saveImage } from './upload.ts';
 import {
@@ -64,6 +73,9 @@ const CSP = [
   "base-uri 'none'",
   "object-src 'none'",
 ].join('; ');
+
+/** A plausible hostname (optionally with a port); used to vet forwarded hosts. */
+const HOST_PATTERN = /^[a-z0-9.-]+(:\d+)?$/i;
 
 const LOGIN_BODY_LIMIT = 16 * 1024;
 const AVATAR_BODY_LIMIT = 6 * 1024 * 1024;
@@ -146,7 +158,15 @@ export function createApp(deps: AppDeps): Hono {
       forwardedProto === 'https' || forwardedProto === 'http'
         ? forwardedProto
         : url.protocol.replace(':', '');
-    return `${scheme}://${forwardedHost ?? url.host}`;
+    // Only trust a forwarded host that looks like a hostname; anything else
+    // (empty, CRLF, spaces) falls back to the request's own host. This blocks
+    // host-header poisoning of the absolute URLs we emit. Set BASE_URL in
+    // production to bypass forwarded headers entirely.
+    const host =
+      forwardedHost !== undefined && HOST_PATTERN.test(forwardedHost)
+        ? forwardedHost
+        : url.host;
+    return `${scheme}://${host}`;
   }
 
   function ensureCsrf(c: Context): string {
@@ -201,6 +221,10 @@ export function createApp(deps: AppDeps): Hono {
   app.get('/health', (c) => c.text('ok'));
 
   app.get('/', (c) => {
+    c.header(
+      'Link',
+      '</contact.vcf>; rel="alternate"; type="text/vcard", </contact.json>; rel="alternate"; type="application/json"',
+    );
     return c.html(
       renderProfilePage({
         profile: getProfile(db),
@@ -209,6 +233,47 @@ export function createApp(deps: AppDeps): Hono {
         baseUrl: requestBaseUrl(c),
       }),
     );
+  });
+
+  app.get('/robots.txt', (c) => {
+    c.header('Content-Type', 'text/plain; charset=utf-8');
+    return c.body(renderRobotsTxt(requestBaseUrl(c)));
+  });
+
+  app.get('/sitemap.xml', (c) => {
+    c.header('Content-Type', 'application/xml; charset=utf-8');
+    return c.body(renderSitemap(requestBaseUrl(c)));
+  });
+
+  app.get('/llms.txt', (c) => {
+    c.header('Content-Type', 'text/plain; charset=utf-8');
+    return c.body(renderLlmsTxt(getProfile(db), listLinks(db), requestBaseUrl(c)));
+  });
+
+  app.get('/contact.vcf', (c) => {
+    const profile = getProfile(db);
+    c.header('Content-Type', 'text/vcard; charset=utf-8');
+    c.header('Content-Disposition', `attachment; filename="${vcardSlug(profile.name)}.vcf"`);
+    return c.body(renderVCard(profile, listLinks(db), requestBaseUrl(c), getProfileUpdatedAt(db)));
+  });
+
+  app.get('/contact.json', (c) => {
+    c.header('Content-Type', 'application/json; charset=utf-8');
+    c.header('Access-Control-Allow-Origin', '*');
+    return c.body(renderContactJson(getProfile(db), listLinks(db), requestBaseUrl(c)));
+  });
+
+  app.get('/.well-known/webfinger', (c) => {
+    const resource = c.req.query('resource');
+    // RFC 7033 §4.2: a missing resource parameter is a client error.
+    if (resource === undefined || resource.length === 0) {
+      return c.text('Missing resource parameter', 400);
+    }
+    const jrd = renderWebFinger(getProfile(db), listLinks(db), requestBaseUrl(c), resource);
+    if (jrd === undefined) return c.notFound();
+    c.header('Content-Type', 'application/jrd+json; charset=utf-8');
+    c.header('Access-Control-Allow-Origin', '*');
+    return c.body(jrd);
   });
 
   /* --------------------------------- auth -------------------------------- */

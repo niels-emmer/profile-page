@@ -7,8 +7,14 @@ HTTP routes, the SQLite schema, and the seed-file format.
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/` | public | Rendered profile page |
+| `GET` | `/` | public | Rendered profile page (includes canonical, `theme-color`, and schema.org `Person` JSON-LD) |
 | `GET` | `/health` | public | `200 ok` |
+| `GET` | `/robots.txt` | public | `text/plain`; allows the page, disallows `/admin` and `/login`, points at the sitemap |
+| `GET` | `/sitemap.xml` | public | `application/xml`; single-URL sitemap for the canonical page |
+| `GET` | `/llms.txt` | public | `text/plain`; profile summary and links for LLM/agent crawlers |
+| `GET` | `/contact.vcf` | public | vCard 4.0 download (`text/vcard`, `Content-Disposition: attachment`) |
+| `GET` | `/contact.json` | public | JSON profile summary for agents (`Access-Control-Allow-Origin: *`) |
+| `GET` | `/.well-known/webfinger` | public | WebFinger JRD (RFC 7033) for `acct:me@<host>` / `acct:<slug>@<host>` / the base URL |
 | `GET` | `/login` | public | Login form (sets the CSRF cookie) |
 | `POST` | `/login` | public | Verify password; sets the session cookie; `302 /admin` |
 | `POST` | `/logout` | public | Clears the session cookie; `302 /login` |
@@ -30,6 +36,26 @@ HTTP routes, the SQLite schema, and the seed-file format.
 
 Unauthenticated requests to `/admin*` receive `302 /login`. Admin POSTs without a
 valid CSRF token receive `403`. Invalid input redirects back to `/admin?error=...`.
+
+## Contact and discovery endpoints
+
+All are derived from the profile at request time — no personal data is stored in
+the repository.
+
+- **`/contact.vcf`** — a vCard 4.0 (`FN`, `N`, `TITLE`, `NOTE`, `PHOTO`, one `URL`
+  per link, `UID`, `REV`). Values are escaped, control characters stripped from
+  URLs, and lines folded per RFC 6350. `REV` is the profile's `updated_at`, so the
+  document is stable between edits. The homepage links it with
+  `<link rel="alternate" type="text/vcard">` and a visible "Add to contacts" link.
+- **`/contact.json`** — `{ name, tagline, description, url, avatar, vcard, links[] }`.
+- **`/.well-known/webfinger`** — answers `resource=acct:me@<host>`,
+  `acct:<name-slug>@<host>`, or the base URL; anything else is `404`, and a
+  missing `resource` is `400` (RFC 7033 §4.2). The JRD's `subject` echoes the
+  requested resource and it advertises the profile page, avatar, vCard, JSON, and
+  each link as `rel="me"`.
+- The homepage also sends `Link: </contact.vcf>; rel="alternate"; type="text/vcard",
+  </contact.json>; rel="alternate"; type="application/json"` and one
+  `<link rel="me">` per link.
 
 ## Database schema
 

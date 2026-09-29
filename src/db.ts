@@ -81,6 +81,14 @@ export function getProfile(db: DatabaseSync): Profile {
   };
 }
 
+/** The profile row's `updated_at` (SQLite `datetime('now')`, UTC), if any. */
+export function getProfileUpdatedAt(db: DatabaseSync): string | undefined {
+  const row = db.prepare('SELECT updated_at FROM profile WHERE id = 1').get() as
+    | { updated_at: string }
+    | undefined;
+  return row?.updated_at;
+}
+
 export function saveProfile(db: DatabaseSync, profile: Profile): void {
   db.prepare(
     `INSERT INTO profile (id, name, tagline, description, avatar_path, updated_at)

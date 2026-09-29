@@ -31,8 +31,8 @@ export function sanitizeCss(value: string): string {
   return value.replace(/[^a-zA-Z0-9#(),.%\s/-]/g, '');
 }
 
-/** MIME type for the favicon, derived from the (validated) file extension. */
-export function faviconMime(path: string): string {
+/** MIME type for an image path, derived from the (validated) file extension. */
+export function imageMime(path: string): string {
   const ext = path.split('.').pop()?.toLowerCase();
   if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
   if (ext === 'webp') return 'image/webp';
@@ -50,6 +50,13 @@ export function backgroundValue(base: string, bg: BackgroundSettings): string {
   const size = bg.size === 'stretch' ? '100% 100%' : bg.size;
   const layer = `url(${bg.imagePath}) ${bg.position}/${size} ${bg.repeat} ${bg.attachment}`;
   return sanitizeCss(`${layer}, ${base}`);
+}
+
+/** Absolute URL of the avatar (uploaded image or bundled default). */
+export function avatarUrlFor(profile: Profile, baseUrl: string): string {
+  return profile.avatarPath !== null
+    ? `${baseUrl}${profile.avatarPath}`
+    : `${baseUrl}/assets/default-avatar.svg`;
 }
 
 export interface PageContext {
@@ -82,8 +89,21 @@ function renderLink(link: Link, index: number): string {
 export function renderProfilePage(ctx: PageContext): string {
   const { profile, links, theme, baseUrl } = ctx;
   const avatar = profile.avatarPath ?? '/assets/default-avatar.svg';
-  const avatarUrl = profile.avatarPath !== null ? `${baseUrl}${profile.avatarPath}` : `${baseUrl}/assets/default-avatar.svg`;
+  const avatarUrl = avatarUrlFor(profile, baseUrl);
   const description = `${profile.tagline} ${profile.description}`.trim();
+
+  // schema.org Person, for rich results and AI answer engines. `<` is escaped
+  // so a value can never break out of the script element.
+  const sameAs = links.map((link) => link.url);
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: profile.name,
+    description,
+    url: `${baseUrl}/`,
+    image: avatarUrl,
+    ...(sameAs.length > 0 ? { sameAs } : {}),
+  }).replaceAll('<', '\\u003c');
 
   const themeStyle =
     `<style>` +
@@ -99,10 +119,11 @@ export function renderProfilePage(ctx: PageContext): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="${sanitizeCss(theme.accentColor)}">
 <meta name="description" content="${escapeHtml(description)}">
 <meta name="author" content="${escapeHtml(profile.name)}">
 <meta name="robots" content="index,follow">
-<meta property="og:url" content="${escapeHtml(baseUrl)}">
+<meta property="og:url" content="${escapeHtml(baseUrl)}/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${escapeHtml(profile.name)}">
 <meta property="og:description" content="${escapeHtml(description)}">
@@ -112,11 +133,16 @@ export function renderProfilePage(ctx: PageContext): string {
 <meta name="twitter:description" content="${escapeHtml(description)}">
 <meta name="twitter:image" content="${escapeHtml(avatarUrl)}">
 <title>${escapeHtml(profile.name)}</title>
-<link rel="icon" type="${faviconMime(theme.faviconPath)}" href="${escapeHtml(theme.faviconPath)}">
+<link rel="canonical" href="${escapeHtml(baseUrl)}/">
+<link rel="alternate" type="text/vcard" href="/contact.vcf">
+<link rel="alternate" type="application/json" href="/contact.json">
+${links.map((link) => `<link rel="me" href="${escapeHtml(link.url)}">`).join('\n')}
+<link rel="icon" type="${imageMime(theme.faviconPath)}" href="${escapeHtml(theme.faviconPath)}">
 <link rel="apple-touch-icon" href="${escapeHtml(theme.faviconPath)}">
 <link rel="stylesheet" href="/assets/css/fontawesome.css">
 <link rel="stylesheet" href="/assets/css/style.css">
 ${themeStyle}
+<script type="application/ld+json">${jsonLd}</script>
 </head>
 <body>
 <div class="container">
@@ -126,12 +152,59 @@ ${themeStyle}
       <h1 class="fadein">${escapeHtml(profile.name)}<span title="Verified user">${BADGE_SVG}</span></h1>
       <center><div class="fadein description-parent"><h3>${escapeHtml(profile.tagline)}</h3><p>${escapeHtml(profile.description)}</p></div></center>
 ${buttons}
+      <p class="contact-link"><a href="/contact.vcf">Add to contacts</a></p>
     </div>
   </div>
 </div>
 </body>
 </html>
 `;
+}
+
+/* --------------------------- crawler / agent files --------------------- */
+
+export function renderRobotsTxt(baseUrl: string): string {
+  return (
+    'User-agent: *\n' +
+    'Allow: /\n' +
+    'Disallow: /admin\n' +
+    'Disallow: /login\n' +
+    '\n' +
+    `Sitemap: ${baseUrl}/sitemap.xml\n`
+  );
+}
+
+export function renderSitemap(baseUrl: string): string {
+  return (
+    '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+    '  <url>\n' +
+    `    <loc>${escapeHtml(baseUrl)}/</loc>\n` +
+    '  </url>\n' +
+    '</urlset>\n'
+  );
+}
+
+/** Collapse newlines and strip markdown link syntax from an inline value. */
+function markdownInline(value: string): string {
+  return value.replace(/[\r\n]+/g, ' ').replace(/[[\]()]/g, '').trim();
+}
+
+/** A short plain-text summary following the llms.txt convention. */
+export function renderLlmsTxt(profile: Profile, links: Link[], baseUrl: string): string {
+  const summary = markdownInline(`${profile.tagline} ${profile.description}`);
+  const description = profile.description.replace(/\r\n?/g, '\n').trim();
+  const linkLines = links
+    .map((link) => `- [${markdownInline(link.text)}](${link.url})`)
+    .join('\n');
+  return (
+    `# ${markdownInline(profile.name)}\n\n` +
+    `> ${summary}\n\n` +
+    `${description}\n\n` +
+    `Canonical page: ${baseUrl}/\n\n` +
+    '## Links\n\n' +
+    `${linkLines}\n`
+  );
 }
 
 /* ------------------------------- login page ---------------------------- */

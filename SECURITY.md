@@ -40,9 +40,15 @@ network, with no published ports. It does not implement TLS itself.
   which strips everything outside `[a-zA-Z0-9#(),.%\s/-]`. This blocks
   `</style>` breakout and `url(...)` payloads. Local background shorthands such as
   `url(/assets/uploads/bg.jpg) center/cover no-repeat fixed` are preserved.
-- **URLs** — link URLs must parse as `http:` or `https:`. `faviconPath` and
-  image-type `iconValue` must be a local `/assets/` path (external URLs are
-  rejected, matching the `img-src 'self'` CSP).
+- **URLs** — link URLs must parse as `http:` or `https:` and may not contain
+  control characters (CR/LF are stripped by `new URL()`, so they are rejected on
+  the raw value). `faviconPath` and image-type `iconValue` must be a local
+  `/assets/` path (external URLs are rejected, matching the `img-src 'self'` CSP).
+- **Forwarded headers** — absolute URLs (canonical, `og:url`, JSON-LD, sitemap,
+  vCard, WebFinger) use `BASE_URL` when set. Otherwise `X-Forwarded-Host` /
+  `X-Forwarded-Proto` are used, but only when the host matches a hostname
+  pattern; malformed or empty values fall back to the request host. **Set
+  `BASE_URL` in production** so forwarded headers are not trusted at all.
 - **Seeds** — `src/seed.ts` applies the same URL and asset-path validation as the
   admin routes before writing anything.
 - **Backup restore** — an uploaded archive is size-capped (50 MB compressed,
