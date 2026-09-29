@@ -19,7 +19,8 @@ HTTP routes, the SQLite schema, and the seed-file format.
 | `POST` | `/login` | public | Verify password; sets the session cookie; `302 /admin` |
 | `POST` | `/logout` | public | Clears the session cookie; `302 /login` |
 | `GET` | `/admin` | session | Admin editor |
-| `POST` | `/admin/profile` | session + CSRF | Save the profile and text colours (preserves favicon/background settings) |
+| `POST` | `/admin/profile` | session + CSRF | Save the profile (name, tagline, description) |
+| `POST` | `/admin/theme` | session + CSRF | Save the default theme mode, visitor toggle, and text colours (preserves favicon/background settings) |
 | `POST` | `/admin/avatar` | session + CSRF | Upload an avatar (multipart, max 6 MB body) |
 | `POST` | `/admin/favicon` | session + CSRF | Upload a favicon (multipart, max 6 MB body) |
 | `POST` | `/admin/favicon/remove` | session + CSRF | Reset the favicon to the bundled default |
@@ -93,7 +94,8 @@ SQLite, opened with WAL mode and foreign keys on. Created on first run.
 ### `settings` (key/value)
 
 Theme values are stored under `theme.*` keys: `backgroundDark`, `backgroundLight`,
-`textDark`, `textLight`, `accentColor`, `faviconPath`, and, per colour scheme,
+`textDark`, `textLight`, `accentColor`, `faviconPath`, `defaultMode`,
+`visitorToggle`, and, per colour scheme,
 `theme.backgroundImageDark.*` / `theme.backgroundImageLight.*` with the sub-keys
 `imagePath`, `size`, `position`, `repeat`, and `attachment`. Adding these keys
 needs no schema migration — `settings` is a key/value table.
@@ -133,6 +135,19 @@ Every option is an enum, so no user-supplied string reaches the stylesheet excep
 the validated asset path. `background-attachment: fixed` is unreliable on iOS
 Safari; `scroll` is the safe default.
 
+### Theme mode and visitor selection
+
+| Field | Values | Default | Meaning |
+|---|---|---|---|
+| `defaultMode` | `light`, `dark`, `system` | `system` | The scheme shown when a visitor has not chosen one. `system` follows `prefers-color-scheme`. |
+| `visitorToggle` | boolean | `false` | When true, the public page renders a bottom-right switcher and honours a visitor's saved choice. |
+
+A forced `light`/`dark` default is baked into the `<html data-theme="...">`
+attribute, so it applies without JavaScript. When `visitorToggle` is on, the
+page also loads `/assets/js/theme.js` (synchronously, before paint) which applies
+the visitor's `localStorage` choice and wires the switcher. The switcher offers
+light, dark, and system; choosing system clears the stored override.
+
 ## Seed file
 
 On first run, `ensureSeeded` applies the built-in demo profile from
@@ -157,7 +172,9 @@ idempotent and never overwrites existing content.
     "backgroundImageLight": {
       "imagePath": null, "size": "cover", "position": "center",
       "repeat": "no-repeat", "attachment": "scroll"
-    }
+    },
+    "defaultMode": "system",
+    "visitorToggle": false
   },
   "links": [
     {
@@ -171,8 +188,9 @@ idempotent and never overwrites existing content.
 ```
 
 Image paths in a seed file refer to files under `DATA_DIR/uploads/`; the JSON and
-the uploads must travel together. `backgroundImageDark` / `backgroundImageLight`
-are optional: older seed files without them are filled in with the defaults above.
+the uploads must travel together. `backgroundImageDark` / `backgroundImageLight`,
+`defaultMode`, and `visitorToggle` are optional: older seed files without them are
+filled in with the defaults above.
 
 ## Backup archive format
 

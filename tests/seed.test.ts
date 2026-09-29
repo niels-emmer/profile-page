@@ -36,6 +36,8 @@ const seed: SeedFile = {
       repeat: 'no-repeat',
       attachment: 'scroll',
     },
+    defaultMode: 'dark',
+    visitorToggle: true,
   },
   links: [
     {
@@ -112,6 +114,8 @@ test('parseSeed fills defaults for a theme from an older backup', () => {
   assert.equal(parsed.theme.backgroundImageDark.imagePath, null);
   assert.equal(parsed.theme.backgroundImageDark.size, 'cover');
   assert.equal(parsed.theme.backgroundImageLight.attachment, 'scroll');
+  assert.equal(parsed.theme.defaultMode, 'system');
+  assert.equal(parsed.theme.visitorToggle, false);
 });
 
 test('applySeed replaces the profile, theme, and links', () => {
@@ -124,6 +128,8 @@ test('applySeed replaces the profile, theme, and links', () => {
     assert.equal(getProfile(db).name, 'Seed Name');
     assert.equal(getProfile(db).avatarPath, '/assets/uploads/avatar.jpg');
     assert.equal(getTheme(db).accentColor, '#0085ff');
+    assert.equal(getTheme(db).defaultMode, 'dark');
+    assert.equal(getTheme(db).visitorToggle, true);
 
     const links = listLinks(db);
     assert.equal(links.length, 2);

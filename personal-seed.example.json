@@ -25,7 +25,9 @@
       "position": "center",
       "repeat": "no-repeat",
       "attachment": "scroll"
-    }
+    },
+    "defaultMode": "system",
+    "visitorToggle": false
   },
   "links": [
     {

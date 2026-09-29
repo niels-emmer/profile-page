@@ -5,6 +5,7 @@ import type {
   BackgroundSize,
   Link,
   Profile,
+  ThemeMode,
   ThemeSettings,
 } from './types.ts';
 
@@ -86,6 +87,26 @@ function renderLink(link: Link, index: number): string {
   );
 }
 
+/**
+ * The visitor-facing theme switcher: a single icon in the bottom-right corner
+ * that expands on hover/focus (or tap) to offer light, dark, and system.
+ * Rendered only when the owner has enabled visitor selection.
+ */
+function renderThemeSwitcher(): string {
+  const option = (value: string, label: string, icon: string): string =>
+    `<button type="button" role="menuitemradio" aria-checked="false" data-theme-value="${value}" aria-label="${label}"><i class="fa-solid ${icon}" aria-hidden="true"></i></button>`;
+  return `<div class="theme-switcher" data-theme-switcher>
+  <button type="button" class="theme-switcher-toggle" aria-label="Change theme" aria-haspopup="true" aria-expanded="false">
+    <i class="fa-solid fa-circle-half-stroke" aria-hidden="true"></i>
+  </button>
+  <div class="theme-switcher-menu" role="menu" aria-label="Theme">
+    ${option('light', 'Light theme', 'fa-sun')}
+    ${option('dark', 'Dark theme', 'fa-moon')}
+    ${option('system', 'System theme', 'fa-desktop')}
+  </div>
+</div>`;
+}
+
 export function renderProfilePage(ctx: PageContext): string {
   const { profile, links, theme, baseUrl } = ctx;
   const avatar = profile.avatarPath ?? '/assets/default-avatar.svg';
@@ -105,17 +126,27 @@ export function renderProfilePage(ctx: PageContext): string {
     ...(sameAs.length > 0 ? { sameAs } : {}),
   }).replaceAll('<', '\\u003c');
 
+  const darkVars = `--bg:${backgroundValue(theme.backgroundDark, theme.backgroundImageDark)};--fg:${sanitizeCss(theme.textDark)};`;
+  const lightVars = `--bg:${backgroundValue(theme.backgroundLight, theme.backgroundImageLight)};--fg:${sanitizeCss(theme.textLight)};`;
   const themeStyle =
     `<style>` +
     `:root{--accent:${sanitizeCss(theme.accentColor)};}` +
-    `@media (prefers-color-scheme: dark){:root{--bg:${backgroundValue(theme.backgroundDark, theme.backgroundImageDark)};--fg:${sanitizeCss(theme.textDark)};}}` +
-    `@media (prefers-color-scheme: light){:root{--bg:${backgroundValue(theme.backgroundLight, theme.backgroundImageLight)};--fg:${sanitizeCss(theme.textLight)};}}` +
+    `:root[data-theme='dark']{${darkVars}}` +
+    `:root[data-theme='light']{${lightVars}}` +
+    `@media (prefers-color-scheme: dark){:root:not([data-theme]){${darkVars}}}` +
+    `@media (prefers-color-scheme: light){:root:not([data-theme]){${lightVars}}}` +
     `</style>`;
+
+  // A forced default is baked into the markup so it applies without JS; the
+  // visitor's own choice (when enabled) is layered on by theme.js before paint.
+  const htmlAttrs =
+    (theme.defaultMode === 'system' ? '' : ` data-theme="${theme.defaultMode}"`) +
+    (theme.visitorToggle ? ' data-theme-toggle="on"' : '');
 
   const buttons = links.map((link, index) => renderLink(link, index)).join('\n');
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en"${htmlAttrs}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -142,6 +173,7 @@ ${links.map((link) => `<link rel="me" href="${escapeHtml(link.url)}">`).join('\n
 <link rel="stylesheet" href="/assets/css/fontawesome.css">
 <link rel="stylesheet" href="/assets/css/style.css">
 ${themeStyle}
+${theme.visitorToggle ? '<script src="/assets/js/theme.js"></script>' : ''}
 <script type="application/ld+json">${jsonLd}</script>
 </head>
 <body>
@@ -156,6 +188,7 @@ ${buttons}
     </div>
   </div>
 </div>
+${theme.visitorToggle ? renderThemeSwitcher() : ''}
 </body>
 </html>
 `;
@@ -303,6 +336,12 @@ const BACKGROUND_ATTACHMENT_OPTIONS = [
   { value: 'fixed', label: 'Fixed (stays put)' },
 ];
 
+const THEME_MODE_OPTIONS: Array<{ value: ThemeMode; label: string }> = [
+  { value: 'system', label: 'System (follow the visitor)' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
+
 function selectField(
   label: string,
   name: string,
@@ -337,6 +376,22 @@ function faviconSection(theme: ThemeSettings, csrfToken: string): string {
       <div class="admin-actions"><button type="submit" class="admin-button">Upload favicon</button></div>
     </form>
     ${remove}
+  </section>`;
+}
+
+function themeSection(theme: ThemeSettings, csrfToken: string): string {
+  return `<section id="theme" class="admin-card">
+    ${cardHeader('Theme', 'Set the default appearance and whether visitors can change it.')}
+    <form method="post" action="/admin/theme" class="admin-form">
+      <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
+      ${selectField('Default theme', 'defaultMode', THEME_MODE_OPTIONS, theme.defaultMode)}
+      <label class="admin-check"><input type="checkbox" name="visitorToggle"${theme.visitorToggle ? ' checked' : ''}> Let visitors switch the theme</label>
+      <h3>Colours</h3>
+      ${colorField('Text (dark)', 'textDark', theme.textDark)}
+      ${colorField('Text (light)', 'textLight', theme.textLight)}
+      ${colorField('Accent', 'accentColor', theme.accentColor)}
+      <div class="admin-actions"><button type="submit" class="admin-button">Save theme</button></div>
+    </form>
   </section>`;
 }
 
@@ -488,6 +543,7 @@ export function renderAdminPage(ctx: AdminContext): string {
     <aside class="admin-nav">
       <nav class="admin-nav-list">
         <a class="admin-nav-link" href="#profile">Profile</a>
+        <a class="admin-nav-link" href="#theme">Theme</a>
         <a class="admin-nav-link" href="#avatar">Avatar</a>
         <a class="admin-nav-link" href="#favicon">Favicon</a>
         <a class="admin-nav-link" href="#background">Background</a>
@@ -498,7 +554,7 @@ export function renderAdminPage(ctx: AdminContext): string {
     <div class="admin-content">
 
   <section id="profile" class="admin-card">
-    ${cardHeader('Profile', 'Your name, tagline, and text colours.')}
+    ${cardHeader('Profile', 'Your name, tagline, and description.')}
     <form method="post" action="/admin/profile" class="admin-form">
       <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
       ${field('Name', 'name', profile.name)}
@@ -506,13 +562,11 @@ export function renderAdminPage(ctx: AdminContext): string {
       <label class="admin-field">Description
         <textarea name="description" rows="3">${escapeHtml(profile.description)}</textarea>
       </label>
-      <h3>Theme</h3>
-      ${colorField('Text (dark)', 'textDark', theme.textDark)}
-      ${colorField('Text (light)', 'textLight', theme.textLight)}
-      ${colorField('Accent', 'accentColor', theme.accentColor)}
       <div class="admin-actions"><button type="submit" class="admin-button">Save profile</button></div>
     </form>
   </section>
+
+  ${themeSection(theme, csrfToken)}
 
   <section id="avatar" class="admin-card">
     ${cardHeader('Avatar', 'A square image works best; it is shown as a circle.')}

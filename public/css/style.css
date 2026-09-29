@@ -29,8 +29,10 @@
   --fg: #222222;
 }
 
+/* The per-request <style> block sets --bg/--fg for an explicit data-theme and
+   for the OS preference when none is set. This is the no-JS fallback. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --bg: radial-gradient(circle, #151826 28%, #0d0f18 100%);
     --fg: #ffffff;
   }
@@ -264,36 +266,142 @@ button {
   }
 }
 
-/* Scrollbar */
+/* Scrollbar — follows the selected theme, falling back to the OS preference. */
+:root[data-theme='dark'] * {
+  scrollbar-width: thin;
+  scrollbar-color: #151826 #222738;
+}
+:root[data-theme='dark'] *::-webkit-scrollbar {
+  width: 8px;
+}
+:root[data-theme='dark'] *::-webkit-scrollbar-track {
+  background: #222738;
+}
+:root[data-theme='dark'] *::-webkit-scrollbar-thumb {
+  background-color: #151826;
+  border-radius: 30px;
+}
+
+:root[data-theme='light'] * {
+  scrollbar-width: thin;
+  scrollbar-color: #323232 #dbdbdb;
+}
+:root[data-theme='light'] *::-webkit-scrollbar {
+  width: 8px;
+}
+:root[data-theme='light'] *::-webkit-scrollbar-track {
+  background: #dbdbdb;
+}
+:root[data-theme='light'] *::-webkit-scrollbar-thumb {
+  background-color: #323232;
+  border-radius: 30px;
+}
+
 @media (prefers-color-scheme: dark) {
-  * {
+  :root:not([data-theme]) * {
     scrollbar-width: thin;
     scrollbar-color: #151826 #222738;
   }
-  *::-webkit-scrollbar {
+  :root:not([data-theme]) *::-webkit-scrollbar {
     width: 8px;
   }
-  *::-webkit-scrollbar-track {
+  :root:not([data-theme]) *::-webkit-scrollbar-track {
     background: #222738;
   }
-  *::-webkit-scrollbar-thumb {
+  :root:not([data-theme]) *::-webkit-scrollbar-thumb {
     background-color: #151826;
     border-radius: 30px;
   }
 }
 @media (prefers-color-scheme: light) {
-  * {
+  :root:not([data-theme]) * {
     scrollbar-width: thin;
     scrollbar-color: #323232 #dbdbdb;
   }
-  *::-webkit-scrollbar {
+  :root:not([data-theme]) *::-webkit-scrollbar {
     width: 8px;
   }
-  *::-webkit-scrollbar-track {
+  :root:not([data-theme]) *::-webkit-scrollbar-track {
     background: #dbdbdb;
   }
-  *::-webkit-scrollbar-thumb {
+  :root:not([data-theme]) *::-webkit-scrollbar-thumb {
     background-color: #323232;
     border-radius: 30px;
+  }
+}
+
+/* --------------------------- theme switcher ---------------------------- */
+
+.theme-switcher {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 50;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.theme-switcher-toggle,
+.theme-switcher-menu button {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 9999px;
+  background: rgba(127, 127, 127, 0.15);
+  color: var(--fg);
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition: background-color 0.15s, color 0.15s, transform 0.15s;
+}
+
+.theme-switcher-toggle:hover,
+.theme-switcher-menu button:hover {
+  background: rgba(127, 127, 127, 0.3);
+}
+
+.theme-switcher-toggle:focus-visible,
+.theme-switcher-menu button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.theme-switcher-menu {
+  display: flex;
+  gap: 0.375rem;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(0.5rem);
+  transition: opacity 0.15s, transform 0.15s, visibility 0.15s;
+}
+
+/* Reveal on hover/focus (desktop) or when opened by tap (mobile). */
+.theme-switcher:hover .theme-switcher-menu,
+.theme-switcher:focus-within .theme-switcher-menu,
+.theme-switcher.is-open .theme-switcher-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.theme-switcher-menu button[aria-checked='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-switcher-menu,
+  .theme-switcher-toggle,
+  .theme-switcher-menu button {
+    transition: none;
   }
 }

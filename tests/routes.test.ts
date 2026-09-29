@@ -226,6 +226,51 @@ test('admin can edit the profile and it appears on the public page', async (t) =
   assert.match(html, /Tagline/);
 });
 
+test('admin can set the default theme and enable the visitor switcher', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS };
+
+  const res = await ctx.app.request('/admin/theme', {
+    method: 'POST',
+    headers,
+    body: formBody({
+      csrf,
+      defaultMode: 'dark',
+      visitorToggle: 'on',
+      textDark: '#ffffff',
+      textLight: '#222222',
+      accentColor: '#0085ff',
+    }),
+  });
+  assert.equal(res.status, 302);
+
+  const theme = getTheme(ctx.db);
+  assert.equal(theme.defaultMode, 'dark');
+  assert.equal(theme.visitorToggle, true);
+
+  const html = await (await ctx.app.request('/')).text();
+  assert.match(html, /<html lang="en" data-theme="dark" data-theme-toggle="on">/);
+  assert.match(html, /data-theme-switcher/);
+});
+
+test('admin theme route rejects an invalid mode and preserves the current one', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS };
+
+  const res = await ctx.app.request('/admin/theme', {
+    method: 'POST',
+    headers,
+    body: formBody({ csrf, defaultMode: 'neon', accentColor: '#0085ff' }),
+  });
+  assert.equal(res.status, 302);
+  assert.equal(getTheme(ctx.db).defaultMode, 'system');
+  assert.equal(getTheme(ctx.db).visitorToggle, false);
+});
+
 test('admin can add, edit, reorder, and delete links', async (t) => {
   const ctx = makeTestApp({ seed: false });
   t.after(() => ctx.cleanup());

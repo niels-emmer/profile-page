@@ -49,6 +49,7 @@ import {
   isHttpUrl,
   isSafeAssetPath,
   isSafeAssetRef,
+  isThemeMode,
 } from './validate.ts';
 
 export interface AppDeps {
@@ -341,16 +342,6 @@ export function createApp(deps: AppDeps): Hono {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
 
-    // The profile form owns only the text colours and accent; the favicon and
-    // background settings are managed by their own routes and must be preserved.
-    const currentTheme = getTheme(db);
-    const theme: ThemeSettings = {
-      ...currentTheme,
-      textDark: formField(body, 'textDark').trim() || currentTheme.textDark,
-      textLight: formField(body, 'textLight').trim() || currentTheme.textLight,
-      accentColor: formField(body, 'accentColor').trim() || currentTheme.accentColor,
-    };
-
     const current = getProfile(db);
     saveProfile(db, {
       name: formField(body, 'name').trim(),
@@ -358,7 +349,26 @@ export function createApp(deps: AppDeps): Hono {
       description: formField(body, 'description').trim(),
       avatarPath: current.avatarPath,
     });
-    saveTheme(db, theme);
+    return c.redirect('/admin?ok=1');
+  });
+
+  app.post('/admin/theme', async (c) => {
+    const body = await c.req.parseBody();
+    if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
+
+    // The theme form owns the mode, visitor toggle, and text colours; the
+    // favicon and background settings are managed by their own routes and must
+    // be preserved.
+    const current = getTheme(db);
+    const mode = formField(body, 'defaultMode');
+    saveTheme(db, {
+      ...current,
+      defaultMode: isThemeMode(mode) ? mode : current.defaultMode,
+      visitorToggle: formField(body, 'visitorToggle') === 'on',
+      textDark: formField(body, 'textDark').trim() || current.textDark,
+      textLight: formField(body, 'textLight').trim() || current.textLight,
+      accentColor: formField(body, 'accentColor').trim() || current.accentColor,
+    });
     return c.redirect('/admin?ok=1');
   });
 
