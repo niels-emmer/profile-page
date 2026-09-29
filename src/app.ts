@@ -547,6 +547,27 @@ export function createApp(deps: AppDeps): Hono {
     return c.redirect('/admin?ok=1');
   });
 
+  // Link-icon upload: returns the new path as JSON so the admin JS can fill the
+  // icon path field. The previously referenced upload (if any) is dropped so
+  // replaced icons do not pile up on disk.
+  app.post('/admin/icon', bodyLimit({ maxSize: IMAGE_BODY_LIMIT }), async (c) => {
+    const body = await c.req.parseBody();
+    if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
+
+    const file = body['icon'];
+    if (!(file instanceof File)) return c.json({ error: 'No file uploaded' }, 400);
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const saved = saveImage(bytes, config.uploadsDir);
+      const oldPath = formField(body, 'oldPath');
+      if (oldPath.length > 0) deleteUpload(config.uploadsDir, oldPath);
+      return c.json({ path: saved.path });
+    } catch (error) {
+      const message = error instanceof UploadError ? error.message : 'Upload failed.';
+      return c.json({ error: message }, 400);
+    }
+  });
+
   app.post('/admin/background', bodyLimit({ maxSize: BACKGROUND_BODY_LIMIT }), async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);

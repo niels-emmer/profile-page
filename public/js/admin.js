@@ -337,3 +337,102 @@ document.addEventListener('click', async (event) => {
     window.location.href = '/admin?error=' + encodeURIComponent('Could not generate the preview image.');
   }
 });
+
+/* --------------------------- icon type fields --------------------------- */
+
+// Show only the icon fields that apply to the selected icon type, and relabel
+// the shared icon-value field accordingly. Without JS everything stays visible.
+document.querySelectorAll('form[data-icon-type-form]').forEach((form) => {
+  const select = form.querySelector('[name="iconType"]');
+  const label = form.querySelector('[data-icon-value-label]');
+  const groups = form.querySelectorAll('[data-icon-fields]');
+  if (select === null) return;
+  const apply = () => {
+    const type = select.value === 'image' ? 'image' : 'fa';
+    groups.forEach((group) => {
+      group.hidden = group.dataset.iconFields !== type;
+    });
+    if (label !== null) {
+      label.textContent = type === 'image' ? 'Icon path' : 'Icon font-awesome code';
+    }
+  };
+  select.addEventListener('change', apply);
+  apply();
+});
+
+/* ------------------------------ icon upload ----------------------------- */
+
+const ICON_MAX = 128;
+
+/** Downscale to a sensible icon size and encode as WebP (JPEG fallback). */
+async function processIcon(file) {
+  const bitmap = await loadBitmap(file);
+  const scale = Math.min(1, ICON_MAX / Math.max(bitmap.width, bitmap.height));
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
+  let blob = await canvasToBlob(canvas, 'image/webp', 0.82);
+  if (blob === null || blob.type !== 'image/webp') {
+    blob = await canvasToBlob(canvas, 'image/jpeg', 0.85);
+  }
+  if (blob === null) throw new Error('Could not encode the icon.');
+  const extension = blob.type === 'image/webp' ? 'webp' : 'jpg';
+  return new File([blob], `icon.${extension}`, { type: blob.type });
+}
+
+// The upload button opens the hidden file picker.
+document.addEventListener('click', (event) => {
+  const trigger = event.target.closest('[data-icon-upload-trigger]');
+  if (trigger === null) return;
+  const input = trigger.closest('[data-icon-upload]')?.querySelector('input[type="file"]');
+  if (input !== null) input.click();
+});
+
+// Process the chosen file, upload it, and fill the icon path field.
+document.addEventListener('change', async (event) => {
+  const input = event.target.closest('[data-icon-upload-input]');
+  if (input === null) return;
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const wrap = input.closest('[data-icon-upload]');
+  const form = input.closest('form');
+  if (wrap === null || form === null) return;
+  const pathField = form.querySelector('[name="iconValue"]');
+  const csrf = form.querySelector('[name="csrf"]');
+  const status = wrap.querySelector('[data-icon-upload-status]');
+  const trigger = wrap.querySelector('[data-icon-upload-trigger]');
+  if (pathField === null || csrf === null) return;
+  if (trigger !== null) {
+    trigger.disabled = true;
+    trigger.textContent = 'Uploading…';
+  }
+  if (status !== null) status.textContent = '';
+  try {
+    const processed = await processIcon(file);
+    const data = new FormData();
+    data.set('csrf', csrf.value);
+    data.set('icon', processed, processed.name);
+    const oldPath = pathField.value;
+    if (oldPath.startsWith('/assets/uploads/')) data.set('oldPath', oldPath);
+    const response = await fetch('/admin/icon', { method: 'POST', body: data });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || typeof result.path !== 'string') {
+      throw new Error(result.error ?? 'Upload failed.');
+    }
+    pathField.value = result.path;
+    if (status !== null) status.textContent = 'Uploaded.';
+  } catch (error) {
+    if (status !== null) {
+      status.textContent = error instanceof Error ? error.message : 'Upload failed.';
+    }
+  } finally {
+    if (trigger !== null) {
+      trigger.disabled = false;
+      trigger.textContent = 'Upload icon';
+    }
+    input.value = '';
+  }
+});

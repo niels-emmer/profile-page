@@ -648,6 +648,19 @@ html {
   gap: 0.5rem;
 }
 
+/* The icon-type toggle hides the non-applicable field groups via [hidden]. */
+[hidden] {
+  display: none !important;
+}
+
+.admin-icon-upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
 .admin-file-row input[type='file'] {
   flex: 1 1 12rem;
   min-width: 0;

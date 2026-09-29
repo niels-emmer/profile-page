@@ -6,6 +6,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Link icon upload**: in the link editor, choosing **Image path** shows an
+  **Upload icon** button that resizes/converts the graphic in the browser,
+  uploads it, and fills the icon path field. Choosing **Font Awesome** shows a
+  lookup link and the icon colour field. Only the fields for the selected icon
+  type are shown.
+
 ### Changed
 
 - The reverse-proxy Docker network is now configurable via `PROXY_NETWORK` in

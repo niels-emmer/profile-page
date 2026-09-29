@@ -3,6 +3,7 @@ import type {
   BackgroundPosition,
   BackgroundSettings,
   BackgroundSize,
+  IconType,
   Link,
   Profile,
   ThemeMode,
@@ -360,6 +361,38 @@ function colorField(label: string, name: string, value: string): string {
     </label>`;
 }
 
+/**
+ * The icon-type select plus the fields that apply to each type. The shared
+ * icon-value field is relabelled by admin.js ("Icon path" vs "Icon
+ * font-awesome code"); the type-specific extras (lookup link + colour for
+ * Font Awesome, upload for images) live in `data-icon-fields` groups that are
+ * shown/hidden to match the selection. Without JS everything stays visible.
+ */
+function iconFields(iconType: IconType, iconValue: string, iconColor: string | null): string {
+  const faSelected = iconType === 'fa' ? ' selected' : '';
+  const imageSelected = iconType === 'image' ? ' selected' : '';
+  return `<label class="admin-field">Icon type
+      <select name="iconType">
+        <option value="fa"${faSelected}>Font Awesome</option>
+        <option value="image"${imageSelected}>Image path</option>
+      </select>
+    </label>
+    <label class="admin-field"><span data-icon-value-label>Icon value (class or path)</span>
+      <input type="text" name="iconValue" value="${escapeHtml(iconValue)}">
+    </label>
+    <div data-icon-fields="fa">
+      <p class="admin-muted"><a class="admin-link" href="https://fontawesome.com/search" target="_blank" rel="noopener">Browse Font Awesome icons</a></p>
+      ${field('Icon colour (blank = inherit)', 'iconColor', iconColor ?? '')}
+    </div>
+    <div data-icon-fields="image">
+      <div class="admin-icon-upload" data-icon-upload>
+        <input type="file" name="icon-upload" accept="image/jpeg,image/png,image/webp" data-icon-upload-input hidden>
+        <button type="button" class="admin-button admin-button--ghost admin-button--sm" data-icon-upload-trigger>Upload icon</button>
+        <span class="admin-muted" data-icon-upload-status></span>
+      </div>
+    </div>`;
+}
+
 function cardHeader(title: string, description?: string): string {
   const hint =
     description !== undefined
@@ -594,20 +627,13 @@ function renderLinkEditor(link: Link, index: number, links: Link[], csrfToken: s
   const downOrder = moveOrder(links, index, 1);
   return `<details class="link-card" data-id="${link.id}">
   <summary><span class="link-title">${escapeHtml(link.text.length > 0 ? link.text : '(untitled)')}</span><button type="button" class="drag-handle" aria-label="Drag to reorder" title="Drag to reorder">⠿</button></summary>
-  <form method="post" action="/admin/links" class="admin-form">
+  <form method="post" action="/admin/links" class="admin-form" data-icon-type-form>
     <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
     <input type="hidden" name="id" value="${link.id}">
     ${field('Text', 'text', link.text)}
     ${field('URL', 'url', link.url, 'url')}
     <label class="admin-check"><input type="checkbox" name="newWindow"${link.newWindow ? ' checked' : ''}> Open in new window</label>
-    <label class="admin-field">Icon type
-      <select name="iconType">
-        <option value="fa"${link.iconType === 'fa' ? ' selected' : ''}>Font Awesome</option>
-        <option value="image"${link.iconType === 'image' ? ' selected' : ''}>Image path</option>
-      </select>
-    </label>
-    ${field('Icon value (class or path)', 'iconValue', link.iconValue)}
-    ${field('Icon colour (blank = inherit)', 'iconColor', link.iconColor ?? '')}
+    ${iconFields(link.iconType, link.iconValue, link.iconColor)}
     ${colorField('Text colour', 'textColor', link.textColor)}
     <label class="admin-field">Colour mode
       <select name="colorMode">
@@ -752,19 +778,12 @@ export function renderAdminPage(ctx: AdminContext): string {
 
   <section id="add-link" class="admin-card">
     ${cardHeader('Add link', 'Create a new button on your page.')}
-    <form method="post" action="/admin/links" class="admin-form">
+    <form method="post" action="/admin/links" class="admin-form" data-icon-type-form>
       <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
       ${field('Text', 'text', '')}
       ${field('URL', 'url', '', 'url')}
       <label class="admin-check"><input type="checkbox" name="newWindow" checked> Open in new window</label>
-      <label class="admin-field">Icon type
-        <select name="iconType">
-          <option value="fa">Font Awesome</option>
-          <option value="image">Image path</option>
-        </select>
-      </label>
-      ${field('Icon value (class or path)', 'iconValue', '')}
-      ${field('Icon colour (blank = inherit)', 'iconColor', '')}
+      ${iconFields('fa', '', null)}
       ${colorField('Text colour', 'textColor', '#ffffff')}
       <label class="admin-field">Colour mode
         <select name="colorMode">

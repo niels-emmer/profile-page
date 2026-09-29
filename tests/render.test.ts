@@ -313,6 +313,10 @@ test('renderAdminPage includes every form and the saved banner', () => {
   assert.match(html, /action="\/admin\/links\/reorder"/);
   assert.match(html, /action="\/admin\/ogimage"/);
   assert.match(html, /action="\/admin\/password"/);
+  assert.match(html, /data-icon-type-form/);
+  assert.match(html, /data-icon-value-label/);
+  assert.match(html, /data-icon-upload-trigger/);
+  assert.match(html, /fontawesome\.com\/search/);
   assert.match(html, /Saved\./);
   assert.match(html, /GitHub/);
 });

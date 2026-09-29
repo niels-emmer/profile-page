@@ -75,6 +75,7 @@ Reuse these classes; do not invent new ones for the same job.
 | Link card | `.link-card`, `.link-title`, `.drag-handle` | Collapsed shows the link text + drag handle; expanded shows the editor |
 | Presets | `.preset-row`, `.preset` | Colour-scheme swatches that fill the nearest form |
 | Preview image | `.admin-og-preview` (+ `--empty`) | 1200×630 card preview; the **Generate** button renders the profile card on a canvas and uploads it (JS-only), with a plain file upload as the no-JS fallback |
+| Icon fields | `form[data-icon-type-form]`, `[data-icon-fields]`, `[data-icon-value-label]`, `.admin-icon-upload` | The link editor shows only the icon fields for the selected type: Font Awesome (lookup link + colour) vs image (path + upload button). JS toggles `[hidden]` and relabels the shared field; without JS everything stays visible |
 
 ### Decisions made (and why)
 
