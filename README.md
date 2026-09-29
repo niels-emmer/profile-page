@@ -141,19 +141,20 @@ The panel covers:
 
 ### Link icons
 
-Each link has an **Icon value** field, which accepts either:
+Each link has an **Icon type** selector that shows only the relevant fields:
 
-- **A Font Awesome class.** The bundled set is
+- **Font Awesome** — an *Icon font-awesome code* field (with a link to the
+  [Font Awesome search](https://fontawesome.com/search) in a new tab) and an
+  *Icon colour* field. The bundled set is
   [Font Awesome Free 6.7.1](https://fontawesome.com/) — solid, regular, and
-  brand icons. Find one at [fontawesome.com/search](https://fontawesome.com/search),
-  copy its class, and paste it in, e.g. `fa-solid fa-globe`,
+  brand icons. Copy a class and paste it in, e.g. `fa-solid fa-globe`,
   `fa-brands fa-github`, or `fa-regular fa-envelope`. Include the family prefix
   (`fa-solid`, `fa-regular`, or `fa-brands`) or the icon will not render.
-- **An image path** — a local asset such as `/assets/icons/github.svg` (the
-  bundled [Simple Icons](https://simpleicons.org/) brand icons) or an uploaded
-  file under `/assets/uploads/`.
-
-Set **Icon type** to match: *Font Awesome* for a class, *Image path* for a path.
+- **Image path** — an *Icon path* field plus an **Upload icon** button that
+  resizes and converts your graphic in the browser and fills the path for you.
+  You can also use a bundled asset such as `/assets/icons/github.svg` (the
+  [Simple Icons](https://simpleicons.org/) brand icons) or any file under
+  `/assets/uploads/`.
 
 ## Build, debug, develop
 

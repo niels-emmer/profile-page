@@ -783,6 +783,45 @@ test('admin preview image upload rejects a non-image', async (t) => {
   assert.equal(getTheme(ctx.db).ogImagePath, null);
 });
 
+test('admin can upload a link icon and gets the path back as JSON', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}` };
+
+  const form = new FormData();
+  form.set('csrf', csrf);
+  form.set('icon', new File([PNG], 'icon.png', { type: 'image/png' }));
+  const res = await ctx.app.request('/admin/icon', { method: 'POST', headers, body: form });
+  assert.equal(res.status, 200);
+  const data = JSON.parse(await res.text()) as { path: string };
+  assert.ok(data.path.startsWith('/assets/uploads/'));
+  assert.equal((await ctx.app.request(data.path)).status, 200);
+});
+
+test('admin icon upload rejects a non-image and a missing CSRF token', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}` };
+
+  const bad = new FormData();
+  bad.set('csrf', csrf);
+  bad.set('icon', new File([Buffer.from('not an image')], 'x.png', { type: 'image/png' }));
+  const rejected = await ctx.app.request('/admin/icon', { method: 'POST', headers, body: bad });
+  assert.equal(rejected.status, 400);
+  assert.match(await rejected.text(), /error/);
+
+  const noCsrf = new FormData();
+  noCsrf.set('icon', new File([PNG], 'icon.png', { type: 'image/png' }));
+  const forbidden = await ctx.app.request('/admin/icon', {
+    method: 'POST',
+    headers: { cookie: `session=${session}` },
+    body: noCsrf,
+  });
+  assert.equal(forbidden.status, 403);
+});
+
 test('admin can upload and remove a favicon', async (t) => {
   const ctx = makeTestApp();
   t.after(() => ctx.cleanup());
@@ -933,7 +972,7 @@ test('new admin image routes reject a missing CSRF token', async (t) => {
   const ctx = makeTestApp();
   t.after(() => ctx.cleanup());
   const { session } = await login(ctx.app);
-  for (const path of ['/admin/favicon', '/admin/favicon/remove', '/admin/background', '/admin/background/remove', '/admin/background/options', '/admin/ogimage', '/admin/ogimage/remove', '/admin/password']) {
+  for (const path of ['/admin/favicon', '/admin/favicon/remove', '/admin/background', '/admin/background/remove', '/admin/background/options', '/admin/ogimage', '/admin/ogimage/remove', '/admin/password', '/admin/icon']) {
     const res = await ctx.app.request(path, {
       method: 'POST',
       headers: { cookie: `session=${session}`, ...FORM_HEADERS },
