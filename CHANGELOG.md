@@ -17,6 +17,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Per-theme background **image opacity** and a solid **background colour** behind
   it (both for the dark and light scheme), so a faded image can sit over a colour.
   The colour also becomes the page background when there is no image.
+- A **governance library** under `docs/governance/` — invariants, architecture,
+  style guide, UI guidelines, testing, workflow, and locked decisions (ADRs) —
+  linked from a new root [`AGENTS.md`](AGENTS.md), so anyone can fork and develop
+  in a consistent style.
 
 ### Fixed
 

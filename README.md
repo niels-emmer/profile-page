@@ -199,6 +199,9 @@ container.
 
 ## Documentation
 
+- [AGENTS.md](AGENTS.md) — entry point for contributors and AI agents
+- [docs/governance/](docs/governance/) — invariants, architecture, style guide, UI
+  guidelines, testing, workflow, and locked decisions
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — reverse proxy, backups, upgrades
 - [docs/API.md](docs/API.md) — routes, data model, seed format, discovery endpoints
 - [SECURITY.md](SECURITY.md) — threat model and hardening
