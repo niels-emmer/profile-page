@@ -5,6 +5,7 @@ import type {
   BackgroundPosition,
   BackgroundRepeat,
   BackgroundSize,
+  ThemeMode,
 } from './types.ts';
 
 const BACKGROUND_SIZES: readonly BackgroundSize[] = ['cover', 'contain', 'stretch', 'auto'];
@@ -21,6 +22,7 @@ const BACKGROUND_POSITIONS: readonly BackgroundPosition[] = [
 ];
 const BACKGROUND_REPEATS: readonly BackgroundRepeat[] = ['no-repeat', 'repeat'];
 const BACKGROUND_ATTACHMENTS: readonly BackgroundAttachment[] = ['scroll', 'fixed'];
+const THEME_MODES: readonly ThemeMode[] = ['light', 'dark', 'system'];
 
 function oneOf<T extends string>(allowed: readonly T[], value: unknown): value is T {
   return typeof value === 'string' && (allowed as readonly string[]).includes(value);
@@ -40,6 +42,10 @@ export function isBackgroundRepeat(value: unknown): value is BackgroundRepeat {
 
 export function isBackgroundAttachment(value: unknown): value is BackgroundAttachment {
   return oneOf(BACKGROUND_ATTACHMENTS, value);
+}
+
+export function isThemeMode(value: unknown): value is ThemeMode {
+  return oneOf(THEME_MODES, value);
 }
 
 /** Control characters (incl. CR/LF) are never valid in a URL or asset path. */

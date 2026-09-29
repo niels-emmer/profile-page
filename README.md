@@ -33,7 +33,9 @@ the same idea, a fraction of the footprint, and your data stays on your own disk
 - **Drag to reorder** links, with Move up/down buttons for keyboard and no-JS use.
 - **One-click backup & restore** — download the whole profile (content, theme, and
   images) as a `.tar.gz`, and restore it later.
-- **Dark and light themes** that follow the visitor's OS preference.
+- **Dark and light themes** — set a default of light, dark, or system (follow the
+  visitor's OS), and optionally let visitors switch for themselves with a
+  bottom-right switcher that remembers their choice.
 - **Crawler- and agent-friendly** — `robots.txt`, `sitemap.xml`, `llms.txt`, a
   canonical link, `theme-color`, and schema.org `Person` JSON-LD.
 - **Contact exchange** — a one-click vCard (`/contact.vcf`), a JSON summary

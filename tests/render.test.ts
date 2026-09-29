@@ -38,6 +38,8 @@ const theme: ThemeSettings = {
   faviconPath: '/assets/favicon.png',
   backgroundImageDark: { ...noBackground },
   backgroundImageLight: { ...noBackground },
+  defaultMode: 'system',
+  visitorToggle: false,
 };
 
 const link: Link = {
@@ -69,6 +71,43 @@ test('sanitizeCss strips markup and url() payloads', () => {
 test('sanitizeCss preserves a local background shorthand', () => {
   const value = 'url(/assets/uploads/background.jpg) center/cover no-repeat fixed';
   assert.equal(sanitizeCss(value), value);
+});
+
+test('renderProfilePage bakes a forced default theme into the markup', () => {
+  const html = renderProfilePage({
+    profile,
+    links: [],
+    theme: { ...theme, defaultMode: 'dark' },
+    baseUrl: 'https://example.com',
+  });
+  assert.match(html, /<html lang="en" data-theme="dark">/);
+  assert.match(html, /:root\[data-theme='dark'\]\{--bg:#000000;--fg:#ffffff;\}/);
+  assert.match(html, /:root:not\(\[data-theme\]\)\{--bg:#000000;--fg:#ffffff;\}/);
+});
+
+test('renderProfilePage follows the OS when the default is system', () => {
+  const html = renderProfilePage({ profile, links: [], theme, baseUrl: 'https://example.com' });
+  assert.match(html, /<html lang="en">/);
+  assert.doesNotMatch(html, /data-theme="/);
+});
+
+test('renderProfilePage renders the switcher only when visitor selection is on', () => {
+  const off = renderProfilePage({ profile, links: [], theme, baseUrl: 'https://example.com' });
+  assert.doesNotMatch(off, /data-theme-switcher/);
+  assert.doesNotMatch(off, /theme\.js/);
+
+  const on = renderProfilePage({
+    profile,
+    links: [],
+    theme: { ...theme, visitorToggle: true },
+    baseUrl: 'https://example.com',
+  });
+  assert.match(on, /<html lang="en" data-theme-toggle="on">/);
+  assert.match(on, /data-theme-switcher/);
+  assert.match(on, /data-theme-value="light"/);
+  assert.match(on, /data-theme-value="dark"/);
+  assert.match(on, /data-theme-value="system"/);
+  assert.match(on, /<script src="\/assets\/js\/theme\.js"><\/script>/);
 });
 
 test('renderProfilePage includes content, escapes it, and applies the theme', () => {
@@ -214,6 +253,9 @@ test('renderAdminPage includes every form and the saved banner', () => {
     saved: true,
   });
   assert.match(html, /action="\/admin\/profile"/);
+  assert.match(html, /action="\/admin\/theme"/);
+  assert.match(html, /name="defaultMode"/);
+  assert.match(html, /name="visitorToggle"/);
   assert.match(html, /action="\/admin\/avatar"/);
   assert.match(html, /action="\/admin\/links"/);
   assert.match(html, /action="\/admin\/links\/1\/delete"/);

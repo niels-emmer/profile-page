@@ -56,6 +56,9 @@ export interface BackgroundSettings {
   attachment: BackgroundAttachment;
 }
 
+/** Which colour scheme the page shows: forced light/dark, or the visitor's OS. */
+export type ThemeMode = 'light' | 'dark' | 'system';
+
 export interface ThemeSettings {
   /** Base colour/gradient layer, shown beneath any background image. */
   backgroundDark: string;
@@ -66,6 +69,10 @@ export interface ThemeSettings {
   faviconPath: string;
   backgroundImageDark: BackgroundSettings;
   backgroundImageLight: BackgroundSettings;
+  /** The site default when a visitor has not chosen a theme themselves. */
+  defaultMode: ThemeMode;
+  /** Whether visitors may override the theme with the on-page switcher. */
+  visitorToggle: boolean;
 }
 
 /** A personal seed file: replaces the profile, theme, and all links. */

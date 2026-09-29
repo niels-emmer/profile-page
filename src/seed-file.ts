@@ -9,6 +9,7 @@ import {
   isBackgroundSize,
   isHttpUrl,
   isSafeAssetRef,
+  isThemeMode,
 } from './validate.ts';
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -45,6 +46,8 @@ function normalizeTheme(raw: unknown): ThemeSettings {
     faviconPath: asString(obj['faviconPath'], DEFAULT_THEME.faviconPath),
     backgroundImageDark: normalizeBackground(obj['backgroundImageDark']),
     backgroundImageLight: normalizeBackground(obj['backgroundImageLight']),
+    defaultMode: isThemeMode(obj['defaultMode']) ? obj['defaultMode'] : DEFAULT_THEME.defaultMode,
+    visitorToggle: obj['visitorToggle'] === true,
   };
 }
 

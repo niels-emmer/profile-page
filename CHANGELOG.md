@@ -6,6 +6,29 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Admin **Theme** section: choose a default of light, dark, or system, and
+  optionally let visitors switch the theme themselves.
+- Visitor theme switcher: a non-intrusive icon in the bottom-right corner of the
+  public page that expands on hover (or tap on mobile) to offer light, dark, and
+  system. The choice is remembered in `localStorage`. A forced default applies
+  without JavaScript.
+
+### Fixed
+
+- Admin colour pickers no longer stretch to the full field width; they render as
+  compact swatches inline with their label.
+- Added spacing between the background upload and options forms in the admin
+  panel.
+- Split the admin "Backup & restore" card into clearly labelled **Backup** and
+  **Restore** sub-sections, each with its own description and controls.
+
+### Changed
+
+- README: added an "Editing your profile" section documenting the admin panel,
+  how to sign in, and how to find Font Awesome icon classes for links.
+
 ## [1.0.0] — 2026-09-29
 
 First stable release: a minimal, self-hosted, single-user link-in-bio page.

@@ -7,6 +7,7 @@ import {
   isBackgroundPosition,
   isBackgroundRepeat,
   isBackgroundSize,
+  isThemeMode,
 } from './validate.ts';
 
 const SCHEMA = `
@@ -251,6 +252,7 @@ function saveBackground(db: DatabaseSync, key: string, bg: BackgroundSettings): 
 }
 
 export function getTheme(db: DatabaseSync): ThemeSettings {
+  const defaultMode = getSetting(db, 'theme.defaultMode');
   return {
     backgroundDark: getSetting(db, 'theme.backgroundDark') ?? DEFAULT_THEME.backgroundDark,
     backgroundLight: getSetting(db, 'theme.backgroundLight') ?? DEFAULT_THEME.backgroundLight,
@@ -260,6 +262,8 @@ export function getTheme(db: DatabaseSync): ThemeSettings {
     faviconPath: getSetting(db, 'theme.faviconPath') ?? DEFAULT_THEME.faviconPath,
     backgroundImageDark: getBackground(db, 'theme.backgroundImageDark'),
     backgroundImageLight: getBackground(db, 'theme.backgroundImageLight'),
+    defaultMode: isThemeMode(defaultMode) ? defaultMode : DEFAULT_THEME.defaultMode,
+    visitorToggle: getSetting(db, 'theme.visitorToggle') === 'true',
   };
 }
 
@@ -270,6 +274,8 @@ export function saveTheme(db: DatabaseSync, theme: ThemeSettings): void {
   setSetting(db, 'theme.textLight', theme.textLight);
   setSetting(db, 'theme.accentColor', theme.accentColor);
   setSetting(db, 'theme.faviconPath', theme.faviconPath);
+  setSetting(db, 'theme.defaultMode', theme.defaultMode);
+  setSetting(db, 'theme.visitorToggle', theme.visitorToggle ? 'true' : 'false');
   saveBackground(db, 'theme.backgroundImageDark', theme.backgroundImageDark);
   saveBackground(db, 'theme.backgroundImageLight', theme.backgroundImageLight);
 }

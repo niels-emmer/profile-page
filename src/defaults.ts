@@ -28,6 +28,8 @@ export const DEFAULT_THEME: ThemeSettings = {
   faviconPath: '/assets/favicon.png',
   backgroundImageDark: { ...DEFAULT_BACKGROUND },
   backgroundImageLight: { ...DEFAULT_BACKGROUND },
+  defaultMode: 'system',
+  visitorToggle: false,
 };
 
 /** A representative set of links so a fresh install is not an empty page. */
