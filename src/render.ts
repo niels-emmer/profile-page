@@ -371,23 +371,25 @@ function colorField(label: string, name: string, value: string): string {
 function iconFields(iconType: IconType, iconValue: string, iconColor: string | null): string {
   const faSelected = iconType === 'fa' ? ' selected' : '';
   const imageSelected = iconType === 'image' ? ' selected' : '';
-  return `<label class="admin-field">Icon type
-      <select name="iconType">
-        <option value="fa"${faSelected}>Font Awesome</option>
-        <option value="image"${imageSelected}>Image path</option>
-      </select>
-    </label>
-    <label class="admin-field"><span data-icon-value-label>Icon value (class or path)</span>
-      <input type="text" name="iconValue" value="${escapeHtml(iconValue)}">
-    </label>
+  return `<div class="admin-grid">
+      <label class="admin-field">Icon type
+        <select name="iconType">
+          <option value="fa"${faSelected}>Font Awesome</option>
+          <option value="image"${imageSelected}>Image path</option>
+        </select>
+      </label>
+      <label class="admin-field"><span data-icon-value-label>Icon value (class or path)</span>
+        <input type="text" name="iconValue" value="${escapeHtml(iconValue)}">
+      </label>
+    </div>
     <div data-icon-fields="fa">
-      <p class="admin-muted"><a class="admin-link" href="https://fontawesome.com/search" target="_blank" rel="noopener">Browse Font Awesome icons</a></p>
+      <p class="admin-muted admin-icon-lookup"><a class="admin-link" href="https://fontawesome.com/search" target="_blank" rel="noopener">Browse Font Awesome icons</a></p>
       ${field('Icon colour (blank = inherit)', 'iconColor', iconColor ?? '')}
     </div>
     <div data-icon-fields="image">
       <div class="admin-icon-upload" data-icon-upload>
         <input type="file" name="icon-upload" accept="image/jpeg,image/png,image/webp" data-icon-upload-input hidden>
-        <button type="button" class="admin-button admin-button--ghost admin-button--sm" data-icon-upload-trigger>Upload icon</button>
+        <button type="button" class="admin-button" data-icon-upload-trigger>Upload icon</button>
         <span class="admin-muted" data-icon-upload-status></span>
       </div>
     </div>`;
@@ -630,20 +632,26 @@ function renderLinkEditor(link: Link, index: number, links: Link[], csrfToken: s
   <form method="post" action="/admin/links" class="admin-form" data-icon-type-form>
     <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
     <input type="hidden" name="id" value="${link.id}">
-    ${field('Text', 'text', link.text)}
-    ${field('URL', 'url', link.url, 'url')}
+    <div class="admin-grid">
+      ${field('Text', 'text', link.text)}
+      ${field('URL', 'url', link.url, 'url')}
+    </div>
     <label class="admin-check"><input type="checkbox" name="newWindow"${link.newWindow ? ' checked' : ''}> Open in new window</label>
     ${iconFields(link.iconType, link.iconValue, link.iconColor)}
-    ${colorField('Text colour', 'textColor', link.textColor)}
-    <label class="admin-field">Colour mode
-      <select name="colorMode">
-        <option value="solid"${link.colorMode === 'solid' ? ' selected' : ''}>Solid</option>
-        <option value="gradient"${link.colorMode === 'gradient' ? ' selected' : ''}>Gradient</option>
-      </select>
-    </label>
-    ${colorField('Colour from', 'colorFrom', link.colorFrom)}
-    ${colorField('Colour to', 'colorTo', link.colorTo)}
-    ${field('Border colour (blank = none)', 'borderColor', link.borderColor ?? '')}
+    <div class="admin-grid">
+      ${colorField('Text colour', 'textColor', link.textColor)}
+      ${colorField('Colour from', 'colorFrom', link.colorFrom)}
+      ${colorField('Colour to', 'colorTo', link.colorTo)}
+    </div>
+    <div class="admin-grid">
+      <label class="admin-field">Colour mode
+        <select name="colorMode">
+          <option value="solid"${link.colorMode === 'solid' ? ' selected' : ''}>Solid</option>
+          <option value="gradient"${link.colorMode === 'gradient' ? ' selected' : ''}>Gradient</option>
+        </select>
+      </label>
+      ${field('Border colour (blank = none)', 'borderColor', link.borderColor ?? '')}
+    </div>
     <div class="preset-row">${presetButtons()}</div>
     <div class="admin-actions">
       <button type="submit" class="admin-button">Save link</button>
@@ -780,20 +788,26 @@ export function renderAdminPage(ctx: AdminContext): string {
     ${cardHeader('Add link', 'Create a new button on your page.')}
     <form method="post" action="/admin/links" class="admin-form" data-icon-type-form>
       <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
-      ${field('Text', 'text', '')}
-      ${field('URL', 'url', '', 'url')}
+      <div class="admin-grid">
+        ${field('Text', 'text', '')}
+        ${field('URL', 'url', '', 'url')}
+      </div>
       <label class="admin-check"><input type="checkbox" name="newWindow" checked> Open in new window</label>
       ${iconFields('fa', '', null)}
-      ${colorField('Text colour', 'textColor', '#ffffff')}
-      <label class="admin-field">Colour mode
-        <select name="colorMode">
-          <option value="solid">Solid</option>
-          <option value="gradient">Gradient</option>
-        </select>
-      </label>
-      ${colorField('Colour from', 'colorFrom', '#0085ff')}
-      ${colorField('Colour to', 'colorTo', '#0085ff')}
-      ${field('Border colour (blank = none)', 'borderColor', '')}
+      <div class="admin-grid">
+        ${colorField('Text colour', 'textColor', '#ffffff')}
+        ${colorField('Colour from', 'colorFrom', '#0085ff')}
+        ${colorField('Colour to', 'colorTo', '#0085ff')}
+      </div>
+      <div class="admin-grid">
+        <label class="admin-field">Colour mode
+          <select name="colorMode">
+            <option value="solid">Solid</option>
+            <option value="gradient">Gradient</option>
+          </select>
+        </label>
+        ${field('Border colour (blank = none)', 'borderColor', '')}
+      </div>
       <div class="preset-row">${presetButtons()}</div>
       <div class="admin-actions"><button type="submit" class="admin-button">Add link</button></div>
     </form>

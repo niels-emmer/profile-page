@@ -661,6 +661,14 @@ html {
   margin-top: 0.25rem;
 }
 
+.admin-icon-upload .admin-muted {
+  margin: 0;
+}
+
+.admin-icon-lookup {
+  margin: 0 0 0.5rem;
+}
+
 .admin-file-row input[type='file'] {
   flex: 1 1 12rem;
   min-width: 0;
