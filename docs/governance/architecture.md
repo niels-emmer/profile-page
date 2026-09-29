@@ -91,8 +91,9 @@ Four tables (`src/db.ts`):
 
 **Theme state is a key/value bag**, e.g. `theme.backgroundDark`,
 `theme.defaultMode`, `theme.backgroundImageDark.imagePath`,
-`theme.backgroundImageDark.opacity`. This is why new theme settings need no
-migration (see [invariants.md](invariants.md#9-theme-settings-use-the-keyvalue-table--no-migration)).
+`theme.backgroundImageDark.opacity`, `theme.ogImagePath`. This is why new theme
+settings need no migration (see
+[invariants.md](invariants.md#9-theme-settings-use-the-keyvalue-table--no-migration)).
 
 **Seeding.** `ensureSeeded` applies `DEFAULT_SEED` (the "Alex Rivera" demo) only
 when no profile row exists. It is idempotent — later edits, including deleting
@@ -109,8 +110,8 @@ passes through `escapeHtml`; every CSS value through `sanitizeCss`.
   `rel="alternate"`), a per-request `<style>` block for the theme, and the
   visitor switcher when enabled.
 - **`renderLoginPage`** — the password form (sets the CSRF cookie).
-- **`renderAdminPage`** — the editor: nav, profile, theme, avatar, favicon,
-  background, links, backup/restore.
+- **`renderAdminPage`** — the editor: nav, profile, theme, avatar, preview,
+  favicon, background, links, backup/restore, security.
 - **Discovery files** — `renderRobotsTxt`, `renderSitemap`, `renderLlmsTxt`, and
   `src/contact.ts` for `contact.vcf` / `contact.json` / WebFinger.
 
@@ -119,6 +120,12 @@ passes through `escapeHtml`; every CSS value through `sanitizeCss`.
 - `ensureAuth` (in `auth.ts`, called at boot): `ADMIN_PASSWORD` wins and
   re-hashes when it changes; otherwise a random password is generated once and
   logged. Changing the password rotates the session secret, invalidating sessions.
+- The admin can also change the password from the **Security** section
+  (`POST /admin/password`): it verifies the current password, requires 8+
+  characters, rotates the session secret (signing out every other session), and
+  re-issues the current session so the user stays logged in. When
+  `ADMIN_PASSWORD` is set, the UI notes that the environment value wins on
+  restart.
 - Sessions are **stateless** HMAC-SHA256 tokens (`<expiry-ms>.<hmac>`), 7-day TTL,
   in an `HttpOnly`, `SameSite=Lax`, `Secure` (in production) cookie.
 - Every state-changing POST uses a **double-submit CSRF cookie**.
@@ -136,6 +143,11 @@ Full threat model: [SECURITY.md](../../SECURITY.md).
 
 `deleteUpload` removes a file only when it lives under `/assets/uploads/` with a
 plain basename, so bundled assets are never touched.
+
+The **social preview image** (`theme.ogImagePath`, the 1200×630 card emitted as
+`og:image`/`twitter:image`) is generated in the browser: `admin.js` renders the
+profile card on a `<canvas>` and uploads the PNG through the same
+`saveImage`/`deleteUpload` pipeline (invariant 12 — no server-side codec).
 
 ## Backup and restore
 

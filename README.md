@@ -116,10 +116,12 @@ The panel covers:
 | **Profile** | Name, tagline, and description |
 | **Theme** | Default light/dark/system, whether visitors can switch, and text/accent colours |
 | **Avatar** | Upload a square image (shown as a circle) |
+| **Preview** | Generate a 1200×630 social preview card (name, tagline, avatar on the accent colour) shown when your page is shared, or upload your own |
 | **Favicon** | Upload a browser-tab icon (centre-cropped to a 512×512 PNG in your browser) |
 | **Background** | Per-theme background image with opacity, a solid colour behind it, and size/position/tiling/scroll options |
 | **Links** | Add, edit, delete, and drag-to-reorder your link buttons |
 | **Backup & restore** | Download or restore the whole profile as a `.tar.gz` |
+| **Security** | Change your admin password (signs out other sessions) |
 
 ### Link icons
 

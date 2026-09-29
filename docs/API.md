@@ -22,6 +22,8 @@ HTTP routes, the SQLite schema, and the seed-file format.
 | `POST` | `/admin/profile` | session + CSRF | Save the profile (name, tagline, description) |
 | `POST` | `/admin/theme` | session + CSRF | Save the default theme mode, visitor toggle, and text colours (preserves favicon/background settings) |
 | `POST` | `/admin/avatar` | session + CSRF | Upload an avatar (multipart, max 6 MB body) |
+| `POST` | `/admin/ogimage` | session + CSRF | Upload the social preview image (multipart, max 6 MB body) |
+| `POST` | `/admin/ogimage/remove` | session + CSRF | Remove the preview image; `og:image` falls back to the avatar |
 | `POST` | `/admin/favicon` | session + CSRF | Upload a favicon (multipart, max 6 MB body) |
 | `POST` | `/admin/favicon/remove` | session + CSRF | Reset the favicon to the bundled default |
 | `POST` | `/admin/background` | session + CSRF | Upload a background image for `theme=dark\|light` (multipart, max 9 MB body) |
@@ -30,6 +32,7 @@ HTTP routes, the SQLite schema, and the seed-file format.
 | `POST` | `/admin/links` | session + CSRF | Create a link, or update when `id` is present |
 | `POST` | `/admin/links/:id/delete` | session + CSRF | Delete a link |
 | `POST` | `/admin/links/reorder` | session + CSRF | Persist order from a comma-separated `order` field |
+| `POST` | `/admin/password` | session + CSRF | Change the admin password (current + new + confirm; min 8 chars). Rotates the session secret, signing out other sessions, and re-issues the current session. Rate-limited (10 / 15 min per client IP). |
 | `GET` | `/admin/backup` | session | Download a `.tar.gz` of the profile, theme, links, and uploads |
 | `POST` | `/admin/restore` | session + CSRF | Validate and apply an uploaded `.tar.gz` backup |
 | `GET` | `/assets/*` | public | Bundled assets from `public/` |
@@ -94,8 +97,8 @@ SQLite, opened with WAL mode and foreign keys on. Created on first run.
 ### `settings` (key/value)
 
 Theme values are stored under `theme.*` keys: `backgroundDark`, `backgroundLight`,
-`textDark`, `textLight`, `accentColor`, `faviconPath`, `defaultMode`,
-`visitorToggle`, and, per colour scheme,
+`textDark`, `textLight`, `accentColor`, `faviconPath`, `ogImagePath`,
+`defaultMode`, `visitorToggle`, and, per colour scheme,
 `theme.backgroundImageDark.*` / `theme.backgroundImageLight.*` with the sub-keys
 `imagePath`, `size`, `position`, `repeat`, and `attachment`. Adding these keys
 needs no schema migration — `settings` is a key/value table.
@@ -177,6 +180,7 @@ idempotent and never overwrites existing content.
     "backgroundDark": "...", "backgroundLight": "...",
     "textDark": "#ffffff", "textLight": "#222222",
     "accentColor": "#0085ff", "faviconPath": "/assets/favicon.png",
+    "ogImagePath": "/assets/uploads/preview.png",
     "backgroundImageDark": {
       "imagePath": "/assets/uploads/bg-dark.webp",
       "size": "cover", "position": "center",
@@ -204,8 +208,8 @@ idempotent and never overwrites existing content.
 
 Image paths in a seed file refer to files under `DATA_DIR/uploads/`; the JSON and
 the uploads must travel together. `backgroundImageDark` / `backgroundImageLight`,
-`defaultMode`, and `visitorToggle` are optional: older seed files without them are
-filled in with the defaults above.
+`ogImagePath`, `defaultMode`, and `visitorToggle` are optional: older seed files
+without them are filled in with the defaults above.
 
 ## Backup archive format
 

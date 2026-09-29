@@ -1,5 +1,6 @@
 import { getConnInfo } from '@hono/node-server/conninfo';
 import { serveStatic } from '@hono/node-server/serve-static';
+import { randomBytes } from 'node:crypto';
 import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { getCookie, setCookie } from 'hono/cookie';
@@ -12,6 +13,7 @@ import {
   createSessionToken,
   csrfMatches,
   generateCsrfToken,
+  hashPassword,
   verifyPassword,
   verifySessionToken,
 } from './auth.ts';
@@ -27,6 +29,7 @@ import {
   getTheme,
   listLinks,
   reorderLinks,
+  saveAuth,
   saveProfile,
   saveTheme,
   updateLink,
@@ -89,6 +92,8 @@ export function createApp(deps: AppDeps): Hono {
   const { config, db, auth } = deps;
   const publicDir = deps.publicDir ?? './public';
   const loginLimiter = new RateLimiter(5, 15 * 60 * 1000);
+  // Password changes probe the current password, so they get their own limiter.
+  const passwordLimiter = new RateLimiter(10, 15 * 60 * 1000);
   const app = new Hono();
 
   /* ---------------------------- security headers ------------------------- */
@@ -324,6 +329,54 @@ export function createApp(deps: AppDeps): Hono {
     return c.redirect('/login');
   });
 
+  app.post('/admin/password', async (c) => {
+    const body = await c.req.parseBody();
+    if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
+
+    const ip = clientIp(c);
+    if (passwordLimiter.isBlocked(ip)) {
+      return c.redirect('/admin?error=' + encodeURIComponent('Too many attempts. Try again later.'));
+    }
+
+    const current = formField(body, 'currentPassword');
+    const next = formField(body, 'newPassword');
+    const confirm = formField(body, 'confirmPassword');
+
+    if (!verifyPassword(current, auth.passwordHash, auth.passwordSalt)) {
+      passwordLimiter.record(ip);
+      return c.redirect('/admin?error=' + encodeURIComponent('Current password is incorrect'));
+    }
+    if (next.trim().length < 8) {
+      return c.redirect('/admin?error=' + encodeURIComponent('New password must be at least 8 characters'));
+    }
+    if (next !== confirm) {
+      return c.redirect('/admin?error=' + encodeURIComponent('New passwords do not match'));
+    }
+
+    // Rotate the session secret so every other session is invalidated, exactly
+    // as ensureAuth does when ADMIN_PASSWORD changes at boot.
+    const salt = randomBytes(16).toString('hex');
+    const rotatedSecret = randomBytes(32).toString('hex');
+    const hash = hashPassword(next, salt);
+    saveAuth(db, { passwordHash: hash, passwordSalt: salt, sessionSecret: rotatedSecret });
+    // The in-memory record is what the session guard and login check; keep it
+    // in sync so the change takes effect immediately.
+    auth.passwordHash = hash;
+    auth.passwordSalt = salt;
+    auth.sessionSecret = rotatedSecret;
+    passwordLimiter.reset(ip);
+
+    // Re-issue the current session under the new secret so the user stays in.
+    setCookie(c, SESSION_COOKIE, createSessionToken(rotatedSecret), {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Lax',
+      secure: config.secureCookies,
+      maxAge: SESSION_TTL_SECONDS,
+    });
+    return c.redirect('/admin?ok=1');
+  });
+
   /* --------------------------------- admin ------------------------------- */
 
   app.get('/admin', (c) => {
@@ -335,6 +388,7 @@ export function createApp(deps: AppDeps): Hono {
         theme: getTheme(db),
         csrfToken: ensureCsrf(c),
         saved: c.req.query('ok') !== undefined,
+        passwordManagedByEnv: config.adminPassword !== undefined,
         ...(error !== undefined ? { error } : {}),
       }),
     );
@@ -363,13 +417,14 @@ export function createApp(deps: AppDeps): Hono {
     // be preserved.
     const current = getTheme(db);
     const mode = formField(body, 'defaultMode');
+    const accent = formField(body, 'accentColor').trim();
     saveTheme(db, {
       ...current,
       defaultMode: isThemeMode(mode) ? mode : current.defaultMode,
       visitorToggle: formField(body, 'visitorToggle') === 'on',
       textDark: formField(body, 'textDark').trim() || current.textDark,
       textLight: formField(body, 'textLight').trim() || current.textLight,
-      accentColor: formField(body, 'accentColor').trim() || current.accentColor,
+      accentColor: isHexColor(accent) ? accent : current.accentColor,
     });
     return c.redirect('/admin?ok=1');
   });
@@ -417,6 +472,34 @@ export function createApp(deps: AppDeps): Hono {
     const theme = getTheme(db);
     deleteUpload(config.uploadsDir, theme.faviconPath);
     saveTheme(db, { ...theme, faviconPath: DEFAULT_THEME.faviconPath });
+    return c.redirect('/admin?ok=1');
+  });
+
+  app.post('/admin/ogimage', bodyLimit({ maxSize: IMAGE_BODY_LIMIT }), async (c) => {
+    const body = await c.req.parseBody();
+    if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
+
+    const file = body['ogimage'];
+    if (!(file instanceof File)) return c.redirect('/admin?error=No%20file%20uploaded');
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const saved = saveImage(bytes, config.uploadsDir);
+      const theme = getTheme(db);
+      deleteUpload(config.uploadsDir, theme.ogImagePath);
+      saveTheme(db, { ...theme, ogImagePath: saved.path });
+    } catch (error) {
+      const message = error instanceof UploadError ? error.message : 'Upload failed.';
+      return c.redirect(`/admin?error=${encodeURIComponent(message)}`);
+    }
+    return c.redirect('/admin?ok=1');
+  });
+
+  app.post('/admin/ogimage/remove', async (c) => {
+    const body = await c.req.parseBody();
+    if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
+    const theme = getTheme(db);
+    deleteUpload(config.uploadsDir, theme.ogImagePath);
+    saveTheme(db, { ...theme, ogImagePath: null });
     return c.redirect('/admin?ok=1');
   });
 

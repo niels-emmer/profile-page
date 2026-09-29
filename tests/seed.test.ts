@@ -22,6 +22,7 @@ const seed: SeedFile = {
     textLight: '#222222',
     accentColor: '#0085ff',
     faviconPath: '/assets/favicon.png',
+    ogImagePath: '/assets/uploads/preview.png',
     backgroundImageDark: {
       imagePath: '/assets/uploads/dark.webp',
       size: 'contain',
@@ -88,6 +89,9 @@ test('validateSeed rejects bad URLs and non-local asset paths', () => {
     validateSeed({ ...seed, theme: { ...seed.theme, faviconPath: 'https://evil.example/f.ico' } }),
   );
   assert.throws(() =>
+    validateSeed({ ...seed, theme: { ...seed.theme, ogImagePath: 'https://evil.example/p.png' } }),
+  );
+  assert.throws(() =>
     validateSeed({ ...seed, profile: { ...seed.profile, avatarPath: 'https://evil.example/a.jpg' } }),
   );
   assert.throws(() => validateSeed({ ...seed, links: [{ ...second, iconValue: 'https://evil.example/i.png' }] }));
@@ -120,6 +124,7 @@ test('parseSeed fills defaults for a theme from an older backup', () => {
   assert.equal(parsed.theme.backgroundImageLight.attachment, 'scroll');
   assert.equal(parsed.theme.backgroundImageDark.color, null);
   assert.equal(parsed.theme.backgroundImageDark.opacity, 100);
+  assert.equal(parsed.theme.ogImagePath, null);
   assert.equal(parsed.theme.defaultMode, 'system');
   assert.equal(parsed.theme.visitorToggle, false);
 });
@@ -136,6 +141,7 @@ test('applySeed replaces the profile, theme, and links', () => {
     assert.equal(getTheme(db).accentColor, '#0085ff');
     assert.equal(getTheme(db).defaultMode, 'dark');
     assert.equal(getTheme(db).visitorToggle, true);
+    assert.equal(getTheme(db).ogImagePath, '/assets/uploads/preview.png');
     assert.equal(getTheme(db).backgroundImageDark.color, '#112233');
     assert.equal(getTheme(db).backgroundImageDark.opacity, 60);
 

@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Admin **Preview image** section: a **Generate** button renders a 1200×630
+  social preview card (avatar, name, and tagline on the accent colour) in the
+  browser and uploads it; the public page emits it as `og:image` /
+  `twitter:image`, falling back to the avatar when unset. A plain file upload is
+  the no-JS fallback.
+- Admin **Security** section: change the admin password from the UI (min 8
+  characters). The session secret is rotated, signing out every other session,
+  and the current session is re-issued. Rate-limited per client IP.
 - Admin **Theme** section: choose a default of light, dark, or system, and
   optionally let visitors switch the theme themselves.
 - Visitor theme switcher: a non-intrusive icon in the bottom-right corner of the

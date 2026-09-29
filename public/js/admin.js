@@ -232,3 +232,101 @@ document.querySelectorAll('.admin-color-toggle').forEach((row) => {
   checkbox.addEventListener('change', sync);
   sync();
 });
+
+/* ------------------------- social preview image ------------------------- */
+
+const OG_WIDTH = 1200;
+const OG_HEIGHT = 630;
+
+/** Shrink the font until the text fits the card, then draw it. */
+function drawFittedText(ctx, text, x, y, maxWidth, weight, startSize, minSize) {
+  let size = startSize;
+  do {
+    ctx.font = `${weight} ${size}px Inter, sans-serif`;
+    if (ctx.measureText(text).width <= maxWidth || size <= minSize) break;
+    size -= 4;
+  } while (size > minSize);
+  if (ctx.measureText(text).width > maxWidth) {
+    // Truncate with an ellipsis as a last resort.
+    let truncated = text;
+    while (truncated.length > 0 && ctx.measureText(`${truncated}…`).width > maxWidth) {
+      truncated = truncated.slice(0, -1);
+    }
+    ctx.fillText(`${truncated}…`, x, y);
+    return;
+  }
+  ctx.fillText(text, x, y);
+}
+
+/** Render the profile card on a canvas and upload it as the preview image. */
+async function generateOgImage(button) {
+  const accent = button.dataset.accent || '#0085ff';
+  const textColor = button.dataset.textColor || '#ffffff';
+  const name = button.dataset.name || '';
+  const tagline = button.dataset.tagline || '';
+  const avatarSrc = button.dataset.avatar || '/assets/default-avatar.svg';
+
+  // Inter is loaded via CSS; wait for it so the card uses the site font.
+  try {
+    await document.fonts.load('700 88px Inter');
+    await document.fonts.load('400 44px Inter');
+  } catch (error) {
+    // Fall back to the default sans-serif.
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = OG_WIDTH;
+  canvas.height = OG_HEIGHT;
+  const ctx = canvas.getContext('2d');
+  if (ctx === null) throw new Error('Canvas is not supported.');
+
+  // Background: the accent colour.
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 0, OG_WIDTH, OG_HEIGHT);
+
+  // Avatar as a circle on the left; drawn without it if it cannot load.
+  const avatar = new Image();
+  await new Promise((resolve) => {
+    avatar.onload = resolve;
+    avatar.onerror = resolve;
+    avatar.src = avatarSrc;
+  });
+  const avatarSize = 220;
+  const avatarX = 110;
+  const avatarY = (OG_HEIGHT - avatarSize) / 2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.clip();
+  ctx.drawImage(avatar, avatarX, avatarY, avatarSize, avatarSize);
+  ctx.restore();
+
+  // Name and tagline to the right of the avatar.
+  const textX = avatarX + avatarSize + 56;
+  const maxWidth = OG_WIDTH - textX - 110;
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = textColor;
+  drawFittedText(ctx, name, textX, OG_HEIGHT / 2 - 44, maxWidth, 700, 88, 56);
+  drawFittedText(ctx, tagline, textX, OG_HEIGHT / 2 + 64, maxWidth, 400, 44, 28);
+
+  const blob = await canvasToBlob(canvas, 'image/png');
+  if (blob === null) throw new Error('Could not encode the preview image.');
+  const file = new File([blob], 'preview.png', { type: 'image/png' });
+  const data = new FormData();
+  data.set('csrf', button.dataset.csrf || '');
+  data.set('ogimage', file, file.name);
+  const response = await fetch('/admin/ogimage', { method: 'POST', body: data });
+  window.location.href = response.redirected ? response.url : '/admin?ok=1';
+}
+
+document.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-generate-og]');
+  if (button === null) return;
+  button.disabled = true;
+  try {
+    await generateOgImage(button);
+  } catch (error) {
+    window.location.href = '/admin?error=' + encodeURIComponent('Could not generate the preview image.');
+  }
+});

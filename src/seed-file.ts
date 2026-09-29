@@ -52,6 +52,10 @@ function normalizeTheme(raw: unknown): ThemeSettings {
     textLight: asString(obj['textLight'], DEFAULT_THEME.textLight),
     accentColor: asString(obj['accentColor'], DEFAULT_THEME.accentColor),
     faviconPath: asString(obj['faviconPath'], DEFAULT_THEME.faviconPath),
+    ogImagePath:
+      typeof obj['ogImagePath'] === 'string' && obj['ogImagePath'].length > 0
+        ? obj['ogImagePath']
+        : null,
     backgroundImageDark: normalizeBackground(obj['backgroundImageDark']),
     backgroundImageLight: normalizeBackground(obj['backgroundImageLight']),
     defaultMode: isThemeMode(obj['defaultMode']) ? obj['defaultMode'] : DEFAULT_THEME.defaultMode,
@@ -90,6 +94,9 @@ export function validateSeed(seed: SeedFile): void {
   }
   if (!isSafeAssetRef(seed.theme.faviconPath)) {
     throw new Error(`Invalid faviconPath: ${seed.theme.faviconPath}`);
+  }
+  if (seed.theme.ogImagePath !== null && !isSafeAssetRef(seed.theme.ogImagePath)) {
+    throw new Error(`Invalid preview image path: ${seed.theme.ogImagePath}`);
   }
   for (const bg of [seed.theme.backgroundImageDark, seed.theme.backgroundImageLight]) {
     if (bg.imagePath !== null && !isSafeAssetRef(bg.imagePath)) {
