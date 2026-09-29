@@ -65,7 +65,7 @@ password is logged once on first run; upload body is buffered before the size ca
 ## Phase 7 — Tests + docs
 
 - [x] `tests/`: auth (hash/verify/token/rate-limit), colours, upload validation, routes (login redirect, CSRF reject, CRUD), render fidelity
-- [x] `docs/SECURITY.md`, `docs/DEPLOYMENT.md`, `docs/API.md`, `docs/THIRD-PARTY.md`
+- [x] `SECURITY.md`, `docs/DEPLOYMENT.md`, `docs/API.md`, `docs/THIRD-PARTY.md`
 - [x] Finalise README
 - [x] Run `@reviewer`
 

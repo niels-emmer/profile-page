@@ -111,7 +111,7 @@ All configuration is via environment variables (see `.env.example`).
 
 ## Security
 
-See [docs/SECURITY.md](docs/SECURITY.md). Highlights: scrypt password hashing,
+See [SECURITY.md](SECURITY.md). Highlights: scrypt password hashing,
 signed HttpOnly `SameSite=Lax` cookies, CSRF protection, login rate limiting,
 upload validation, strict security headers, parameterised SQL, and a non-root,
 read-only container.
@@ -119,7 +119,7 @@ read-only container.
 ## Documentation
 
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — reverse proxy, backups, upgrades
-- [docs/SECURITY.md](docs/SECURITY.md) — threat model and hardening
+- [SECURITY.md](SECURITY.md) — threat model and hardening
 - [docs/API.md](docs/API.md) — routes, data model, and seed format
 - [docs/THIRD-PARTY.md](docs/THIRD-PARTY.md) — bundled assets and licenses
 

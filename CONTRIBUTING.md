@@ -7,7 +7,7 @@ please keep changes focused and dependency-free where possible.
 
 - For anything non-trivial, open an issue first so we can agree on the approach.
 - Security issues must **not** be reported as public issues — see
-  [docs/SECURITY.md](docs/SECURITY.md).
+  [SECURITY.md](SECURITY.md).
 
 ## Development setup
 
