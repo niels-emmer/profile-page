@@ -38,21 +38,23 @@ src/
   db.ts         schema + queries (profile, links, settings, auth) + ensureSeeded
   defaults.ts   DEFAULT_PROFILE / DEFAULT_BACKGROUND / DEFAULT_THEME / DEFAULT_LINKS / DEFAULT_SEED
   types.ts      domain types: Profile, Link, NewLink, ThemeSettings, BackgroundSettings, ThemeMode, SeedFile
-  auth.ts       scrypt hashing, HMAC session tokens, CSRF, RateLimiter, ensureAuth
+  auth.ts       scrypt hashing, HMAC session tokens, CSRF, RateLimiter, ensureAuth, isDefaultPassword
   validate.ts   shared input validation (URLs, asset refs, enums, hex colours, opacity)
-  render.ts     renderProfilePage, renderLoginPage, renderAdminPage, discovery files, escapeHtml, sanitizeCss,
-                backgroundValue (per-theme layered background)
+  render.ts     renderProfilePage, renderLoginPage, renderSetPasswordPage, renderAdminPage, discovery files,
+                escapeHtml, sanitizeCss, backgroundValue (per-theme layered background)
   colors.ts     COLOR_SCHEMES presets, readableTextColor, shade, generateGradient
   upload.ts     detectImageType (magic bytes), saveImage, deleteUpload, isSvg, sanitizeSvg
   tar.ts        dependency-free ustar reader/writer
   backup.ts     buildBackup / restoreBackup
   seed-file.ts  parseSeed / validateSeed / applySeed
   seed.ts       CLI: `node src/seed.ts [seed.json]`
+  reset-password.ts CLI: `node src/reset-password.ts [new-password]` — resets the admin password (default `changeme`) and rotates the session secret
 public/
   css/style.css      public page (reimplements the LinkStack/Skeleton look)
   css/admin.css      admin UI (shadcn-inspired dark theme, hand-written)
   css/fontawesome.css Font Awesome Free 6.7.1 (full set)
-  js/admin.js        progressive enhancement (presets, confirm, avatar preview, sliders, drag reorder)
+  js/admin.js        progressive enhancement (presets, confirm, avatar preview, sliders, drag reorder,
+                     icon-type toggle, icon upload, OG-card generation)
   js/theme.js        visitor theme switcher (loaded synchronously in <head> when enabled)
   icons/*.svg        bundled Simple Icons (white fill)
   fonts/             Inter + Font Awesome woff2

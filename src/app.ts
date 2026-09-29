@@ -106,6 +106,10 @@ export function createApp(deps: AppDeps): Hono {
     c.header('X-Frame-Options', 'DENY');
     c.header('Referrer-Policy', 'no-referrer');
     c.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+    // Admin and login pages embed the CSRF token; never let a cache serve them.
+    if (c.req.path === '/login' || c.req.path.startsWith('/admin')) {
+      c.header('Cache-Control', 'no-store');
+    }
     if (config.secureCookies) {
       c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
@@ -548,8 +552,8 @@ export function createApp(deps: AppDeps): Hono {
   });
 
   // Link-icon upload: returns the new path as JSON so the admin JS can fill the
-  // icon path field. The previously referenced upload (if any) is dropped so
-  // replaced icons do not pile up on disk.
+  // icon path field. The previous icon is NOT deleted — two links may share one
+  // uploaded icon, so replacing one must not break the other.
   app.post('/admin/icon', bodyLimit({ maxSize: IMAGE_BODY_LIMIT }), async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
@@ -559,8 +563,6 @@ export function createApp(deps: AppDeps): Hono {
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
       const saved = saveImage(bytes, config.uploadsDir);
-      const oldPath = formField(body, 'oldPath');
-      if (oldPath.length > 0) deleteUpload(config.uploadsDir, oldPath);
       return c.json({ path: saved.path });
     } catch (error) {
       const message = error instanceof UploadError ? error.message : 'Upload failed.';

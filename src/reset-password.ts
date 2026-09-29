@@ -17,6 +17,10 @@ import { saveAuth } from './db.ts';
 
 const dbPath = `${process.env.DATA_DIR ?? './data'}/profile.db`;
 const password = process.argv[2] ?? 'changeme';
+if (password.trim().length < 8) {
+  console.error('Password must be at least 8 characters.');
+  process.exit(1);
+}
 
 const db = new DatabaseSync(dbPath);
 const hasAuth = db

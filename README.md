@@ -31,12 +31,22 @@ the same idea, a fraction of the footprint, and your data stays on your own disk
   and converted in your browser (512×512 PNG favicon, WebP backgrounds), with
   fill/fit/stretch, nine anchor points, tiling, scroll/fixed, and an image
   opacity over a solid background colour.
+- **Social preview image** — generate a 1200×630 card (avatar, name, tagline on
+  the accent colour) in the browser; it's served as `og:image`/`twitter:image`
+  so your page looks right when shared on Discord, Slack, or Twitter.
+- **Link icons** — Font Awesome classes (with a lookup link) or uploaded images;
+  the editor shows only the fields for the chosen icon type, and an **Upload
+  icon** button resizes and converts your graphic in the browser.
 - **Drag to reorder** links, with Move up/down buttons for keyboard and no-JS use.
 - **One-click backup & restore** — download the whole profile (content, theme, and
   images) as a `.tar.gz`, and restore it later.
 - **Dark and light themes** — set a default of light, dark, or system (follow the
   visitor's OS), and optionally let visitors switch for themselves with a
   bottom-right switcher that remembers their choice.
+- **Password managed from the UI** — a fresh install starts with a bootstrap
+  password and forces you to pick your own on first login; change it any time
+  from the Security section (signs out other sessions), or reset a forgotten one
+  with a single `docker exec` command.
 - **Crawler- and agent-friendly** — `robots.txt`, `sitemap.xml`, `llms.txt`, a
   canonical link, `theme-color`, and schema.org `Person` JSON-LD.
 - **Contact exchange** — a one-click vCard (`/contact.vcf`), a JSON summary

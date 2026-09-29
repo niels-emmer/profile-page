@@ -103,8 +103,14 @@ These are known and deliberate for a single-user personal page:
 
 - **scrypt uses Node's defaults** (N=16384, r=8, p=1), below the OWASP
   recommendation of N=2^17. Acceptable for a single account with a strong password.
-- **The generated first-run password is printed once to the logs.** Set
-  `ADMIN_PASSWORD` to avoid it. Treat container logs as sensitive.
+- **Bootstrap-password takeover window.** A fresh install starts with the
+  well-known password `changeme` and the first `/admin` visit forces a change.
+  Anyone who can reach `/login` before the owner changes it can log in with
+  `changeme` and take over the admin. This is mitigated by the deployment model
+  (no published ports; reachable only on the private `PROXY_NETWORK`), so a
+  fresh install should not be exposed to the internet before the first login.
+  Forgot the password later? `docker exec -it profile-page node
+  src/reset-password.ts` then restart.
 - **Request bodies are buffered before validation.** `/admin/avatar` and
   `/admin/favicon` are gated by auth first, then a 6 MB `bodyLimit`;
   `/admin/background` has a 9 MB `bodyLimit`; `/login` has a 16 KB `bodyLimit` and
