@@ -114,6 +114,8 @@ test('backup round-trips per-theme background settings', () => {
         position: 'bottom right',
         repeat: 'repeat',
         attachment: 'fixed',
+        color: '#112233',
+        opacity: 45,
       },
     });
     const archive = buildBackup(source.db, source.config.uploadsDir);
@@ -125,6 +127,8 @@ test('backup round-trips per-theme background settings', () => {
     assert.equal(bg.position, 'bottom right');
     assert.equal(bg.repeat, 'repeat');
     assert.equal(bg.attachment, 'fixed');
+    assert.equal(bg.color, '#112233');
+    assert.equal(bg.opacity, 45);
   } finally {
     dispose(source);
     dispose(target);

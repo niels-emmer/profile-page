@@ -26,7 +26,7 @@ HTTP routes, the SQLite schema, and the seed-file format.
 | `POST` | `/admin/favicon/remove` | session + CSRF | Reset the favicon to the bundled default |
 | `POST` | `/admin/background` | session + CSRF | Upload a background image for `theme=dark\|light` (multipart, max 9 MB body) |
 | `POST` | `/admin/background/remove` | session + CSRF | Remove the background image for `theme=dark\|light` |
-| `POST` | `/admin/background/options` | session + CSRF | Set size/position/repeat/attachment for `theme=dark\|light` |
+| `POST` | `/admin/background/options` | session + CSRF | Set size/position/repeat/attachment, opacity, and colour for `theme=dark\|light` |
 | `POST` | `/admin/links` | session + CSRF | Create a link, or update when `id` is present |
 | `POST` | `/admin/links/:id/delete` | session + CSRF | Delete a link |
 | `POST` | `/admin/links/reorder` | session + CSRF | Persist order from a comma-separated `order` field |
@@ -124,16 +124,29 @@ Each colour scheme also has a `BackgroundSettings` object:
 | `position` | `center`, `top`, `bottom`, `left`, `right`, `top left`, `top right`, `bottom left`, `bottom right` | `center` |
 | `repeat` | `no-repeat`, `repeat` | `no-repeat` |
 | `attachment` | `scroll`, `fixed` | `scroll` |
+| `color` | hex (`#rrggbb`) or `null` | `null` |
+| `opacity` | `0`–`100` | `100` |
 
-The renderer composes the final value, e.g.:
+`color` is the solid colour behind the image, and is also used as the page
+background when there is no image (`null` falls back to `backgroundDark` /
+`backgroundLight`). `opacity` fades the image toward that colour: because CSS
+cannot set the opacity of a `background-image`, the renderer draws a translucent
+veil of `color` over the image instead. With an image, no colour, or full
+opacity, the value stays a plain shorthand:
 
 ```
 url(/assets/uploads/bg.webp) bottom right/contain repeat fixed, radial-gradient(circle, #151826 28%, #0d0f18 100%)
 ```
 
-Every option is an enum, so no user-supplied string reaches the stylesheet except
-the validated asset path. `background-attachment: fixed` is unreliable on iOS
-Safari; `scroll` is the safe default.
+At 40% opacity over `#112233`, it becomes:
+
+```
+linear-gradient(rgba(17, 34, 51, 0.6), rgba(17, 34, 51, 0.6)), url(/assets/uploads/bg.webp) center/cover no-repeat scroll, #112233
+```
+
+Every option is an enum or a validated hex colour, so no user-supplied string
+reaches the stylesheet except the validated asset path. `background-attachment:
+fixed` is unreliable on iOS Safari; `scroll` is the safe default.
 
 ### Theme mode and visitor selection
 
@@ -167,11 +180,13 @@ idempotent and never overwrites existing content.
     "backgroundImageDark": {
       "imagePath": "/assets/uploads/bg-dark.webp",
       "size": "cover", "position": "center",
-      "repeat": "no-repeat", "attachment": "scroll"
+      "repeat": "no-repeat", "attachment": "scroll",
+      "color": "#112233", "opacity": 60
     },
     "backgroundImageLight": {
       "imagePath": null, "size": "cover", "position": "center",
-      "repeat": "no-repeat", "attachment": "scroll"
+      "repeat": "no-repeat", "attachment": "scroll",
+      "color": null, "opacity": 100
     },
     "defaultMode": "system",
     "visitorToggle": false

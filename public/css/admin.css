@@ -580,7 +580,7 @@ html {
   border: 1px solid hsl(var(--border));
   border-radius: var(--radius);
   background: hsl(var(--background));
-  padding: 0.75rem 1rem;
+  padding: 1rem;
   margin-bottom: 0.75rem;
 }
 
@@ -617,6 +617,73 @@ html {
 /* Separate the upload form from the options form below it. */
 .bg-section form + form {
   margin-top: 1rem;
+}
+
+/* Background controls: inline upload row, opacity slider, colour toggle, and a
+   responsive grid for the placement selects. */
+.admin-file-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-file-row input[type='file'] {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.admin-field--range {
+  gap: 0.5rem;
+}
+
+.admin-range-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-range-value {
+  color: hsl(var(--muted-foreground));
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-field input[type='range'] {
+  width: 100%;
+  height: 1.25rem;
+  margin: 0;
+  padding: 0;
+  accent-color: hsl(var(--ring));
+  cursor: pointer;
+}
+
+.admin-color-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-color-toggle input[type='color'] {
+  flex: none;
+  width: 3rem;
+  height: 2.25rem;
+  padding: 0.25rem;
+  border: 1px solid hsl(var(--input));
+  border-radius: calc(var(--radius) - 2px);
+  background: hsl(var(--background));
+  cursor: pointer;
+}
+
+.admin-color-toggle input[type='color']:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* ----------------------------- sub-sections ---------------------------- */

@@ -54,6 +54,10 @@ export interface BackgroundSettings {
   position: BackgroundPosition;
   repeat: BackgroundRepeat;
   attachment: BackgroundAttachment;
+  /** Solid colour behind the image (hex), or null to use the theme base. */
+  color: string | null;
+  /** Image opacity, 0-100. Lower values let the colour show through. */
+  opacity: number;
 }
 
 /** Which colour scheme the page shows: forced light/dark, or the visitor's OS. */

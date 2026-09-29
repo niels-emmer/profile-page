@@ -7,7 +7,9 @@ import {
   isBackgroundPosition,
   isBackgroundRepeat,
   isBackgroundSize,
+  isHexColor,
   isHttpUrl,
+  isOpacity,
   isSafeAssetRef,
   isThemeMode,
 } from './validate.ts';
@@ -24,6 +26,10 @@ function asString(value: unknown, fallback: string): string {
 function normalizeBackground(raw: unknown): BackgroundSettings {
   const obj = asObject(raw);
   const imagePath = obj['imagePath'];
+  const opacity =
+    typeof obj['opacity'] === 'number'
+      ? obj['opacity']
+      : Number.parseInt(String(obj['opacity'] ?? ''), 10);
   return {
     imagePath: typeof imagePath === 'string' && imagePath.length > 0 ? imagePath : null,
     size: isBackgroundSize(obj['size']) ? obj['size'] : DEFAULT_BACKGROUND.size,
@@ -32,6 +38,8 @@ function normalizeBackground(raw: unknown): BackgroundSettings {
     attachment: isBackgroundAttachment(obj['attachment'])
       ? obj['attachment']
       : DEFAULT_BACKGROUND.attachment,
+    color: isHexColor(obj['color']) ? obj['color'] : null,
+    opacity: isOpacity(opacity) ? opacity : DEFAULT_BACKGROUND.opacity,
   };
 }
 
