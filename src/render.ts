@@ -382,23 +382,31 @@ function selectField(
 
 function faviconSection(theme: ThemeSettings, csrfToken: string): string {
   const custom = theme.faviconPath.startsWith('/assets/uploads/');
-  const remove = custom
-    ? `<form method="post" action="/admin/favicon/remove" class="inline-form" data-confirm="Remove the custom favicon?">
+  // The remove button lives in the upload row but submits its own form, so the
+  // two actions sit side by side without nesting forms.
+  const removeButton = custom
+    ? '<button type="submit" form="favicon-remove" class="admin-button admin-button--danger">Remove</button>'
+    : '';
+  const removeForm = custom
+    ? `<form id="favicon-remove" method="post" action="/admin/favicon/remove" data-confirm="Remove the custom favicon?">
       <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
-      <button type="submit" class="admin-button admin-button--danger">Remove favicon</button>
     </form>`
     : '';
   return `<section id="favicon" class="admin-card">
-    ${cardHeader('Favicon', 'Shown in the browser tab and on mobile home screens.')}
+    ${cardHeader('Favicon', 'Shown in the browser tab and on mobile home screens. Uploads are centre-cropped to a 512×512 PNG in your browser.')}
     <img class="admin-favicon" src="${escapeHtml(theme.faviconPath)}" alt="Current favicon">
     <form method="post" action="/admin/favicon" enctype="multipart/form-data" class="admin-form" data-image-process="favicon">
       <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
-      <label class="admin-field">New favicon (JPEG, PNG, WebP; max 5 MB)
-        <input type="file" name="favicon" accept="image/jpeg,image/png,image/webp" required>
-      </label>
-      <div class="admin-actions"><button type="submit" class="admin-button">Upload favicon</button></div>
+      <div class="admin-field">
+        <span>Favicon image (JPEG, PNG, WebP; max 5 MB)</span>
+        <div class="admin-file-row">
+          <input type="file" name="favicon" accept="image/jpeg,image/png,image/webp" required>
+          <button type="submit" class="admin-button">Upload</button>
+          ${removeButton}
+        </div>
+      </div>
     </form>
-    ${remove}
+    ${removeForm}
   </section>`;
 }
 
@@ -434,7 +442,7 @@ function backgroundSection(
   const removeFormId = `bg-remove-${slot}`;
   const removeButton =
     bg.imagePath !== null
-      ? `<button type="submit" form="${removeFormId}" class="admin-button admin-button--danger admin-button--sm">Remove</button>`
+      ? `<button type="submit" form="${removeFormId}" class="admin-button admin-button--danger">Remove</button>`
       : '';
   const removeForm =
     bg.imagePath !== null
@@ -618,10 +626,13 @@ export function renderAdminPage(ctx: AdminContext): string {
     <img class="admin-avatar" src="${escapeHtml(avatar)}" alt="Current avatar">
     <form method="post" action="/admin/avatar" enctype="multipart/form-data" class="admin-form">
       <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
-      <label class="admin-field">New avatar (JPEG, PNG, WebP; max 5 MB)
-        <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp" required>
-      </label>
-      <div class="admin-actions"><button type="submit" class="admin-button">Upload avatar</button></div>
+      <div class="admin-field">
+        <span>Avatar image (JPEG, PNG, WebP; max 5 MB)</span>
+        <div class="admin-file-row">
+          <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp" required>
+          <button type="submit" class="admin-button">Upload</button>
+        </div>
+      </div>
     </form>
   </section>
 

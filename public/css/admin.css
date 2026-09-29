@@ -623,12 +623,13 @@ html {
    responsive grid for the placement selects. */
 .admin-file-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
 }
 
 .admin-file-row input[type='file'] {
-  flex: 1;
+  flex: 1 1 12rem;
   min-width: 0;
 }
 
