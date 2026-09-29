@@ -26,7 +26,7 @@ Browser ──HTTPS──▶ reverse proxy ──proxy-net──▶ profile-page
 ```
 
 The container publishes **no host port**; the proxy reaches it by container name
-on the external `proxy-net` network.
+on the external network named in `PROXY_NETWORK` (default `proxy-net`).
 
 ## Source map
 

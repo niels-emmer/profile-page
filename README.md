@@ -53,21 +53,24 @@ the same idea, a fraction of the footprint, and your data stays on your own disk
 ```bash
 git clone https://github.com/niels-emmer/profile-page.git
 cd profile-page
-cp .env.example .env              # optionally set ADMIN_PASSWORD
-docker network create proxy-net   # once, if it doesn't exist
+cp .env.example .env
+# set PROXY_NETWORK in .env to the Docker network your reverse proxy is on
 docker compose up -d --build
-docker compose logs profile-page  # first-run password is printed here if generated
 ```
 
-The container joins the external `proxy-net` network and listens on port `3000`;
-**no ports are published**. Point your reverse proxy at `http://profile-page:3000`.
+The container joins the external Docker network named in `PROXY_NETWORK`
+(default `proxy-net`) and listens on port `3000`; **no ports are published**.
+Point your reverse proxy at `http://profile-page:3000`. If the network does not
+exist yet, create it once: `docker network create <name>`.
 
 Once it is running, open `/admin` on your domain to edit your profile — see
 [Editing your profile](#editing-your-profile).
 
 ### Behind a reverse proxy
 
-Any TLS-terminating proxy works (Nginx Proxy Manager, Caddy, Traefik). For Nginx:
+Any TLS-terminating proxy works (Nginx Proxy Manager, Caddy, Traefik). The proxy
+and the container must share the Docker network named in `PROXY_NETWORK` in your
+`.env`. For Nginx:
 
 ```nginx
 server {
@@ -184,7 +187,7 @@ All configuration is via environment variables (see `.env.example`).
 |---|---|---|
 | `PORT` | `3000` | Listen port |
 | `DATA_DIR` | `./data` (`/data` in Docker) | SQLite database + uploads |
-| `ADMIN_PASSWORD` | *(generated)* | Admin password. If unset, a random one is generated on first run and logged once. |
+| `PROXY_NETWORK` | `proxy-net` | External Docker network shared with your reverse proxy |
 | `SESSION_SECRET` | *(generated)* | Cookie signing secret. Generated and persisted if unset. |
 | `SECURE_COOKIES` | `true` in production | Adds the `Secure` flag to session cookies. Set `false` only for plain-HTTP local development. |
 | `BASE_URL` | *(request host)* | Public base URL for absolute URLs in meta tags and discovery files. |
