@@ -266,10 +266,13 @@ async function generateOgImage(button) {
   const tagline = button.dataset.tagline || '';
   const avatarSrc = button.dataset.avatar || '/assets/default-avatar.svg';
 
-  // Inter is loaded via CSS; wait for it so the card uses the site font.
+  // Inter is loaded via CSS; wait for it so the card uses the site font. A
+  // timeout guarantees the flow can never hang on font loading.
   try {
-    await document.fonts.load('700 88px Inter');
-    await document.fonts.load('400 44px Inter');
+    await Promise.race([
+      Promise.all([document.fonts.load('700 88px Inter'), document.fonts.load('400 44px Inter')]),
+      new Promise((resolve) => setTimeout(resolve, 1500)),
+    ]);
   } catch (error) {
     // Fall back to the default sans-serif.
   }
@@ -323,10 +326,14 @@ async function generateOgImage(button) {
 document.addEventListener('click', async (event) => {
   const button = event.target.closest('[data-generate-og]');
   if (button === null) return;
+  const originalText = button.textContent;
   button.disabled = true;
+  button.textContent = 'Generating…';
   try {
     await generateOgImage(button);
   } catch (error) {
+    button.disabled = false;
+    button.textContent = originalText;
     window.location.href = '/admin?error=' + encodeURIComponent('Could not generate the preview image.');
   }
 });

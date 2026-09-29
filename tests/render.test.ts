@@ -9,6 +9,7 @@ import {
   renderLoginPage,
   renderProfilePage,
   renderRobotsTxt,
+  renderSetPasswordPage,
   renderSitemap,
   sanitizeCss,
 } from '../src/render.ts';
@@ -282,6 +283,15 @@ test('renderLoginPage includes the CSRF token and error message', () => {
   const html = renderLoginPage('token-123', 'Incorrect password.');
   assert.match(html, /name="csrf" value="token-123"/);
   assert.match(html, /Incorrect password\./);
+});
+
+test('renderSetPasswordPage includes the CSRF token, password fields, and error', () => {
+  const html = renderSetPasswordPage('token-123', 'Too short.');
+  assert.match(html, /name="csrf" value="token-123"/);
+  assert.match(html, /action="\/admin\/set-password"/);
+  assert.match(html, /name="newPassword"/);
+  assert.match(html, /name="confirmPassword"/);
+  assert.match(html, /Too short\./);
 });
 
 test('renderAdminPage includes every form and the saved banner', () => {

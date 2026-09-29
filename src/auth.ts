@@ -6,6 +6,9 @@ import { getAuth, saveAuth, type AuthRecord } from './db.ts';
 const SCRYPT_KEYLEN = 64;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** The bootstrap password on a fresh install; the user is forced to change it. */
+export const DEFAULT_PASSWORD = 'changeme';
+
 export const SESSION_COOKIE = 'session';
 export const CSRF_COOKIE = 'csrf';
 export const SESSION_TTL_SECONDS = SESSION_TTL_MS / 1000;
@@ -21,6 +24,11 @@ export function verifyPassword(password: string, hash: string, salt: string): bo
   if (expected.length !== SCRYPT_KEYLEN) return false;
   const candidate = Buffer.from(hashPassword(password, salt), 'hex');
   return timingSafeEqual(candidate, expected);
+}
+
+/** True while the account still uses the bootstrap password and must change it. */
+export function isDefaultPassword(auth: AuthRecord): boolean {
+  return verifyPassword(DEFAULT_PASSWORD, auth.passwordHash, auth.passwordSalt);
 }
 
 /* ------------------------------- sessions ------------------------------ */
@@ -99,8 +107,10 @@ export class RateLimiter {
 /**
  * Ensure an auth record exists and matches the configured password.
  *
- * - `ADMIN_PASSWORD` wins: the stored hash is re-derived whenever it changes.
- * - Otherwise a random password is generated once, logged, and persisted.
+ * - `ADMIN_PASSWORD` (if set) wins: the stored hash is re-derived whenever it
+ *   changes. Not set by default — the password is managed from the UI.
+ * - Otherwise a fresh install starts with the `changeme` bootstrap password,
+ *   and the first visit to `/admin` forces the user to pick their own.
  * - `SESSION_SECRET` wins over the stored secret; otherwise one is generated.
  */
 export function ensureAuth(db: DatabaseSync, config: Config): AuthRecord {
@@ -126,14 +136,12 @@ export function ensureAuth(db: DatabaseSync, config: Config): AuthRecord {
       saveAuth(db, { ...existing, sessionSecret });
     }
   } else if (existing === undefined) {
-    const password = randomBytes(12).toString('base64url');
     const salt = randomBytes(16).toString('hex');
     saveAuth(db, {
-      passwordHash: hashPassword(password, salt),
+      passwordHash: hashPassword(DEFAULT_PASSWORD, salt),
       passwordSalt: salt,
       sessionSecret,
     });
-    console.log(`Generated admin password (set ADMIN_PASSWORD to choose your own): ${password}`);
   } else if (existing.sessionSecret !== sessionSecret) {
     saveAuth(db, { ...existing, sessionSecret });
   }

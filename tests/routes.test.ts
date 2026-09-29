@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { deleteLink, ensureSeeded, getAuth, getProfile, getTheme, listLinks } from '../src/db.ts';
-import { ensureAuth, verifyPassword } from '../src/auth.ts';
+import { ensureAuth, isDefaultPassword, verifyPassword } from '../src/auth.ts';
 import { createTar, readTar } from '../src/tar.ts';
 import { MAX_UPLOAD_BYTES } from '../src/upload.ts';
 import { FORM_HEADERS, cookieHeader, cookiesFrom, formBody, login, makeTestApp } from './helpers.ts';
@@ -594,6 +594,88 @@ test('password change rate limit trips after repeated wrong attempts', async (t)
   const record = getAuth(ctx.db);
   assert.ok(record !== undefined);
   assert.ok(verifyPassword('test-password', record.passwordHash, record.passwordSalt));
+});
+
+test('first run without ADMIN_PASSWORD uses the changeme bootstrap password', async (t) => {
+  const ctx = makeTestApp({ noEnvPassword: true });
+  t.after(() => ctx.cleanup());
+  const record = getAuth(ctx.db);
+  assert.ok(record !== undefined);
+  assert.ok(verifyPassword('changeme', record.passwordHash, record.passwordSalt));
+  assert.ok(isDefaultPassword(record));
+});
+
+test('login with the bootstrap password redirects /admin to set-password', async (t) => {
+  const ctx = makeTestApp({ noEnvPassword: true });
+  t.after(() => ctx.cleanup());
+  const { session } = await login(ctx.app, 'changeme');
+  const admin = await ctx.app.request('/admin', { headers: { cookie: `session=${session}` } });
+  assert.equal(admin.status, 302);
+  assert.equal(admin.headers.get('location'), '/admin/set-password');
+});
+
+test('set-password flow forces a secure password before the admin is usable', async (t) => {
+  const ctx = makeTestApp({ noEnvPassword: true });
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app, 'changeme');
+
+  const page = await ctx.app.request('/admin/set-password', {
+    headers: { cookie: `session=${session}` },
+  });
+  assert.equal(page.status, 200);
+  assert.match(await page.text(), /Set your password/);
+
+  const short = await ctx.app.request('/admin/set-password', {
+    method: 'POST',
+    headers: { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS },
+    body: formBody({ csrf, newPassword: 'short', confirmPassword: 'short' }),
+  });
+  assert.equal(short.status, 302);
+  assert.match(short.headers.get('location') ?? '', /error=/);
+
+  const ok = await ctx.app.request('/admin/set-password', {
+    method: 'POST',
+    headers: { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS },
+    body: formBody({ csrf, newPassword: 'my-secure-pass', confirmPassword: 'my-secure-pass' }),
+  });
+  assert.equal(ok.status, 302);
+  assert.equal(ok.headers.get('location'), '/admin?ok=1');
+  const newSession = cookiesFrom(ok)['session'] ?? '';
+  assert.ok(newSession.length > 0);
+
+  const admin = await ctx.app.request('/admin', { headers: { cookie: `session=${newSession}` } });
+  assert.equal(admin.status, 200);
+
+  const relogin = await login(ctx.app, 'my-secure-pass');
+  assert.equal(relogin.response.status, 302);
+  const record = getAuth(ctx.db);
+  assert.ok(record !== undefined);
+  assert.ok(!verifyPassword('changeme', record.passwordHash, record.passwordSalt));
+});
+
+test('set-password page redirects to /admin once the password is changed', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { session } = await login(ctx.app);
+  const res = await ctx.app.request('/admin/set-password', {
+    headers: { cookie: `session=${session}` },
+  });
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get('location'), '/admin');
+});
+
+test('reset-password script resets the password and signs out sessions', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { execFileSync } = await import('node:child_process');
+  execFileSync('node', ['src/reset-password.ts', 'reset-pass-123'], {
+    env: { ...process.env, DATA_DIR: ctx.config.dataDir },
+    cwd: process.cwd(),
+  });
+  const record = getAuth(ctx.db);
+  assert.ok(record !== undefined);
+  assert.ok(verifyPassword('reset-pass-123', record.passwordHash, record.passwordSalt));
+  assert.ok(!verifyPassword('test-password', record.passwordHash, record.passwordSalt));
 });
 
 test('admin can upload an avatar and it is served', async (t) => {

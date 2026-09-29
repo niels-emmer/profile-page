@@ -117,15 +117,23 @@ passes through `escapeHtml`; every CSS value through `sanitizeCss`.
 
 ## Authentication and sessions
 
-- `ensureAuth` (in `auth.ts`, called at boot): `ADMIN_PASSWORD` wins and
-  re-hashes when it changes; otherwise a random password is generated once and
-  logged. Changing the password rotates the session secret, invalidating sessions.
-- The admin can also change the password from the **Security** section
+- `ensureAuth` (in `auth.ts`, called at boot): a fresh install starts with the
+  bootstrap password `changeme` (no `ADMIN_PASSWORD` env var by default). If
+  `ADMIN_PASSWORD` is set it wins and re-hashes when it changes — a legacy
+  override, not the normal flow. Changing the password rotates the session
+  secret, invalidating sessions.
+- The first visit to `/admin` while the password is still `changeme` is
+  redirected to `/admin/set-password`, which forces a secure password before
+  anything else can be edited.
+- The admin can change the password from the **Security** section
   (`POST /admin/password`): it verifies the current password, requires 8+
   characters, rotates the session secret (signing out every other session), and
   re-issues the current session so the user stays logged in. When
   `ADMIN_PASSWORD` is set, the UI notes that the environment value wins on
   restart.
+- Forgot the password? `node src/reset-password.ts [new-password]` resets it
+  (default `changeme`) and rotates the session secret; in the container:
+  `docker exec -it profile-page node src/reset-password.ts`.
 - Sessions are **stateless** HMAC-SHA256 tokens (`<expiry-ms>.<hmac>`), 7-day TTL,
   in an `HttpOnly`, `SameSite=Lax`, `Secure` (in production) cookie.
 - Every state-changing POST uses a **double-submit CSRF cookie**.

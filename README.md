@@ -104,10 +104,23 @@ Everything is edited from the built-in admin panel — no config files, no redep
 
 1. Open **`/admin`** on your site (e.g. `https://example.com/admin`, or
    `http://localhost:3000/admin` locally). You are redirected to `/login`.
-2. Sign in with your `ADMIN_PASSWORD`. If you did not set one, the random
-   password generated on first run is printed once in the logs
-   (`docker compose logs profile-page`).
+2. Sign in. A fresh install starts with the bootstrap password **`changeme`**;
+   the first visit to `/admin` then asks you to pick your own secure password.
 3. Edit and save — changes appear on the public page immediately.
+
+### Forgot your password?
+
+Reset it from the container, then restart so the app picks it up (this also
+signs out every session):
+
+```bash
+docker exec -it profile-page node src/reset-password.ts
+docker compose restart profile-page
+# resets to "changeme" — log in and you will be asked to set a new one
+# or pick the new password directly:
+docker exec -it profile-page node src/reset-password.ts 'my-new-password'
+docker compose restart profile-page
+```
 
 The panel covers:
 
