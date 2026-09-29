@@ -48,6 +48,18 @@ export function isThemeMode(value: unknown): value is ThemeMode {
   return oneOf(THEME_MODES, value);
 }
 
+/** A 3- or 6-digit hex colour, as produced by `<input type="color">`. */
+const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+export function isHexColor(value: unknown): value is string {
+  return typeof value === 'string' && HEX_COLOR.test(value);
+}
+
+/** An integer percentage in the range 0-100. */
+export function isOpacity(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 100;
+}
+
 /** Control characters (incl. CR/LF) are never valid in a URL or asset path. */
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
 

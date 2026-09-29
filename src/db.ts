@@ -7,6 +7,8 @@ import {
   isBackgroundPosition,
   isBackgroundRepeat,
   isBackgroundSize,
+  isHexColor,
+  isOpacity,
   isThemeMode,
 } from './validate.ts';
 
@@ -234,12 +236,17 @@ function getBackground(db: DatabaseSync, key: string): BackgroundSettings {
   const position = getSetting(db, `${key}.position`);
   const repeat = getSetting(db, `${key}.repeat`);
   const attachment = getSetting(db, `${key}.attachment`);
+  const color = getSetting(db, `${key}.color`);
+  const opacity = getSetting(db, `${key}.opacity`);
+  const parsedOpacity = opacity !== undefined ? Number.parseInt(opacity, 10) : Number.NaN;
   return {
     imagePath: imagePath !== undefined && imagePath.length > 0 ? imagePath : null,
     size: isBackgroundSize(size) ? size : DEFAULT_BACKGROUND.size,
     position: isBackgroundPosition(position) ? position : DEFAULT_BACKGROUND.position,
     repeat: isBackgroundRepeat(repeat) ? repeat : DEFAULT_BACKGROUND.repeat,
     attachment: isBackgroundAttachment(attachment) ? attachment : DEFAULT_BACKGROUND.attachment,
+    color: isHexColor(color) ? color : null,
+    opacity: isOpacity(parsedOpacity) ? parsedOpacity : DEFAULT_BACKGROUND.opacity,
   };
 }
 
@@ -249,6 +256,8 @@ function saveBackground(db: DatabaseSync, key: string, bg: BackgroundSettings): 
   setSetting(db, `${key}.position`, bg.position);
   setSetting(db, `${key}.repeat`, bg.repeat);
   setSetting(db, `${key}.attachment`, bg.attachment);
+  setSetting(db, `${key}.color`, bg.color ?? '');
+  setSetting(db, `${key}.opacity`, String(bg.opacity));
 }
 
 export function getTheme(db: DatabaseSync): ThemeSettings {

@@ -20,6 +20,8 @@ const noBackground: BackgroundSettings = {
   position: 'center',
   repeat: 'no-repeat',
   attachment: 'scroll',
+  color: null,
+  opacity: 100,
 };
 
 const profile: Profile = {
@@ -156,11 +158,37 @@ test('backgroundValue layers the image over the base and defaults to the base al
     position: 'top left',
     repeat: 'repeat',
     attachment: 'fixed',
+    color: null,
+    opacity: 100,
   });
   assert.equal(
     layered,
     'url(/assets/uploads/bg.webp) top left/100% 100% repeat fixed, #000000',
   );
+});
+
+test('backgroundValue uses the colour behind the image and fades it by opacity', () => {
+  const opaque = backgroundValue('#000000', {
+    ...noBackground,
+    imagePath: '/assets/uploads/bg.webp',
+    color: '#112233',
+  });
+  assert.equal(opaque, 'url(/assets/uploads/bg.webp) center/cover no-repeat scroll, #112233');
+
+  const faded = backgroundValue('#000000', {
+    ...noBackground,
+    imagePath: '/assets/uploads/bg.webp',
+    color: '#112233',
+    opacity: 40,
+  });
+  assert.equal(
+    faded,
+    'linear-gradient(rgba(17, 34, 51, 0.6), rgba(17, 34, 51, 0.6)), url(/assets/uploads/bg.webp) center/cover no-repeat scroll, #112233',
+  );
+});
+
+test('backgroundValue uses the colour as the base when there is no image', () => {
+  assert.equal(backgroundValue('#000000', { ...noBackground, color: '#112233' }), '#112233');
 });
 
 test('renderProfilePage emits the favicon MIME, apple-touch-icon, and background layer', () => {

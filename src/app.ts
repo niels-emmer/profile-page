@@ -46,7 +46,9 @@ import {
   isBackgroundAttachment,
   isBackgroundPosition,
   isBackgroundSize,
+  isHexColor,
   isHttpUrl,
+  isOpacity,
   isSafeAssetPath,
   isSafeAssetRef,
   isThemeMode,
@@ -473,7 +475,17 @@ export function createApp(deps: AppDeps): Hono {
     const repeat = formField(body, 'backgroundRepeat') === 'on' ? 'repeat' : 'no-repeat';
     const theme = getTheme(db);
     const current = slot === 'dark' ? theme.backgroundImageDark : theme.backgroundImageLight;
-    const updated: BackgroundSettings = { ...current, size, position, repeat, attachment };
+    const opacity = Number.parseInt(formField(body, 'backgroundOpacity'), 10);
+    const color = formField(body, 'backgroundColor').trim();
+    const updated: BackgroundSettings = {
+      ...current,
+      size,
+      position,
+      repeat,
+      attachment,
+      opacity: isOpacity(opacity) ? opacity : current.opacity,
+      color: formField(body, 'backgroundColorEnabled') === 'on' && isHexColor(color) ? color : null,
+    };
     saveTheme(db, withBackground(theme, slot, updated));
     return c.redirect('/admin?ok=1');
   });

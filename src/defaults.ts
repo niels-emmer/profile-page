@@ -16,6 +16,8 @@ export const DEFAULT_BACKGROUND: BackgroundSettings = {
   position: 'center',
   repeat: 'no-repeat',
   attachment: 'scroll',
+  color: null,
+  opacity: 100,
 };
 
 /** Default look: the dark/light gradient theme the app is designed around. */

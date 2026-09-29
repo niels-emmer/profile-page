@@ -29,7 +29,8 @@ the same idea, a fraction of the footprint, and your data stays on your own disk
   config files, no redeploys.
 - **Custom favicon and per-theme backgrounds** — upload an image and it's resized
   and converted in your browser (512×512 PNG favicon, WebP backgrounds), with
-  fill/fit/stretch, nine anchor points, tiling, and scroll/fixed.
+  fill/fit/stretch, nine anchor points, tiling, scroll/fixed, and an image
+  opacity over a solid background colour.
 - **Drag to reorder** links, with Move up/down buttons for keyboard and no-JS use.
 - **One-click backup & restore** — download the whole profile (content, theme, and
   images) as a `.tar.gz`, and restore it later.
@@ -116,7 +117,7 @@ The panel covers:
 | **Theme** | Default light/dark/system, whether visitors can switch, and text/accent colours |
 | **Avatar** | Upload a square image (shown as a circle) |
 | **Favicon** | Upload a browser-tab icon (centre-cropped to a 512×512 PNG in your browser) |
-| **Background** | Per-theme background image with size, position, tiling, and scroll options |
+| **Background** | Per-theme background image with opacity, a solid colour behind it, and size/position/tiling/scroll options |
 | **Links** | Add, edit, delete, and drag-to-reorder your link buttons |
 | **Backup & restore** | Download or restore the whole profile as a `.tar.gz` |
 

@@ -14,6 +14,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   public page that expands on hover (or tap on mobile) to offer light, dark, and
   system. The choice is remembered in `localStorage`. A forced default applies
   without JavaScript.
+- Per-theme background **image opacity** and a solid **background colour** behind
+  it (both for the dark and light scheme), so a faded image can sit over a colour.
+  The colour also becomes the page background when there is no image.
 
 ### Fixed
 
@@ -23,6 +26,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   panel.
 - Split the admin "Backup & restore" card into clearly labelled **Backup** and
   **Restore** sub-sections, each with its own description and controls.
+- Reorganised the admin **Background** section to match the rest of the panel: an
+  inline upload/remove row, a responsive grid for the placement selects, and an
+  opacity slider — instead of full-width stacked controls.
 
 ### Changed
 

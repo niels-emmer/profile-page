@@ -207,3 +207,28 @@ if (linkList !== null) {
   linkList.addEventListener('pointerup', finish);
   linkList.addEventListener('pointercancel', finish);
 }
+
+/* ------------------------- background controls ---------------------------- */
+
+// Keep the opacity percentage readout in sync with its slider.
+document.querySelectorAll('.admin-field--range input[type="range"]').forEach((input) => {
+  const output = input.closest('.admin-field--range')?.querySelector('.admin-range-value');
+  if (!output) return;
+  const update = () => {
+    output.textContent = `${input.value}%`;
+  };
+  input.addEventListener('input', update);
+  update();
+});
+
+// The background colour swatch only applies when its checkbox is on.
+document.querySelectorAll('.admin-color-toggle').forEach((row) => {
+  const checkbox = row.querySelector('input[type="checkbox"]');
+  const color = row.querySelector('input[type="color"]');
+  if (!checkbox || !color) return;
+  const sync = () => {
+    color.disabled = !checkbox.checked;
+  };
+  checkbox.addEventListener('change', sync);
+  sync();
+});

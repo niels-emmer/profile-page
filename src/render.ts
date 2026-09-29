@@ -41,16 +41,39 @@ export function imageMime(path: string): string {
   return 'image/png';
 }
 
+/** `#rgb` / `#rrggbb` to an `r, g, b` triple, or null if it is not a hex colour. */
+function hexToRgb(hex: string): string | null {
+  const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim());
+  if (match === null) return null;
+  let value = match[1] ?? '';
+  if (value.length === 3) {
+    value = value
+      .split('')
+      .map((char) => char + char)
+      .join('');
+  }
+  const int = Number.parseInt(value, 16);
+  return `${(int >> 16) & 255}, ${(int >> 8) & 255}, ${int & 255}`;
+}
+
 /**
  * Compose a CSS `background` value: the uploaded image (if any) layered over
- * the base colour/gradient. Every option is an enum, so nothing user-supplied
- * reaches the stylesheet except the validated asset path.
+ * the solid colour (or the theme base). When the image is less than fully
+ * opaque, a translucent veil of the colour is drawn over it, which is how CSS
+ * fakes a semi-transparent background image. Every option is an enum or a
+ * validated hex colour, so nothing user-supplied reaches the stylesheet except
+ * the validated asset path.
  */
 export function backgroundValue(base: string, bg: BackgroundSettings): string {
-  if (bg.imagePath === null) return sanitizeCss(base);
+  const behind = bg.color ?? base;
+  if (bg.imagePath === null) return sanitizeCss(behind);
   const size = bg.size === 'stretch' ? '100% 100%' : bg.size;
-  const layer = `url(${bg.imagePath}) ${bg.position}/${size} ${bg.repeat} ${bg.attachment}`;
-  return sanitizeCss(`${layer}, ${base}`);
+  const image = `url(${bg.imagePath}) ${bg.position}/${size} ${bg.repeat} ${bg.attachment}`;
+  const rgb = bg.color !== null ? hexToRgb(bg.color) : null;
+  if (rgb === null || bg.opacity >= 100) return sanitizeCss(`${image}, ${behind}`);
+  const alpha = (100 - bg.opacity) / 100;
+  const veil = `linear-gradient(rgba(${rgb}, ${alpha}), rgba(${rgb}, ${alpha}))`;
+  return sanitizeCss(`${veil}, ${image}, ${behind}`);
 }
 
 /** Absolute URL of the avatar (uploaded image or bundled default). */
@@ -401,38 +424,60 @@ function backgroundSection(
   bg: BackgroundSettings,
   csrfToken: string,
 ): string {
+  const label = escapeHtml(title.toLowerCase());
   const preview =
     bg.imagePath !== null
-      ? `<img class="admin-background-preview" src="${escapeHtml(bg.imagePath)}" alt="Current ${escapeHtml(title.toLowerCase())} background">`
+      ? `<img class="admin-background-preview" src="${escapeHtml(bg.imagePath)}" alt="Current ${label} background">`
       : '<div class="admin-background-preview admin-background-preview--empty">No background image</div>';
-  const remove =
+  // The remove button lives in the upload row but submits its own form, so the
+  // two actions sit side by side without nesting forms.
+  const removeFormId = `bg-remove-${slot}`;
+  const removeButton =
     bg.imagePath !== null
-      ? `<form method="post" action="/admin/background/remove" class="inline-form" data-confirm="Remove the ${escapeHtml(title.toLowerCase())} background image?">
+      ? `<button type="submit" form="${removeFormId}" class="admin-button admin-button--danger admin-button--sm">Remove</button>`
+      : '';
+  const removeForm =
+    bg.imagePath !== null
+      ? `<form id="${removeFormId}" method="post" action="/admin/background/remove" data-confirm="Remove the ${label} background image?">
       <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
       <input type="hidden" name="theme" value="${slot}">
-      <button type="submit" class="admin-button admin-button--danger">Remove background</button>
     </form>`
       : '';
+  const defaultColor = slot === 'dark' ? '#0d0f18' : '#ffffff';
   return `<details class="bg-section">
   <summary>${escapeHtml(title)}</summary>
   ${preview}
   <form method="post" action="/admin/background" enctype="multipart/form-data" class="admin-form" data-image-process="background">
     <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
     <input type="hidden" name="theme" value="${slot}">
-    <label class="admin-field">New background (JPEG, PNG, WebP; max 8 MB)
-      <input type="file" name="background" accept="image/jpeg,image/png,image/webp" required>
-    </label>
-    <div class="admin-actions"><button type="submit" class="admin-button">Upload background</button></div>
+    <div class="admin-field">
+      <span>Background image (JPEG, PNG, WebP; max 8 MB)</span>
+      <div class="admin-file-row">
+        <input type="file" name="background" accept="image/jpeg,image/png,image/webp" required>
+        <button type="submit" class="admin-button">Upload</button>
+        ${removeButton}
+      </div>
+    </div>
   </form>
-  ${remove}
+  ${removeForm}
   <form method="post" action="/admin/background/options" class="admin-form">
     <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
     <input type="hidden" name="theme" value="${slot}">
-    ${selectField('Size', 'backgroundSize', BACKGROUND_SIZE_OPTIONS, bg.size)}
-    ${selectField('Position', 'backgroundPosition', BACKGROUND_POSITION_OPTIONS, bg.position)}
+    <div class="admin-field admin-field--range">
+      <div class="admin-range-head"><span>Image opacity</span><output class="admin-range-value">${bg.opacity}%</output></div>
+      <input type="range" name="backgroundOpacity" min="0" max="100" step="1" value="${bg.opacity}">
+    </div>
+    <div class="admin-color-toggle">
+      <label class="admin-check"><input type="checkbox" name="backgroundColorEnabled"${bg.color !== null ? ' checked' : ''}> Solid background colour</label>
+      <input type="color" name="backgroundColor" value="${escapeHtml(bg.color ?? defaultColor)}">
+    </div>
+    <div class="admin-grid">
+      ${selectField('Size', 'backgroundSize', BACKGROUND_SIZE_OPTIONS, bg.size)}
+      ${selectField('Position', 'backgroundPosition', BACKGROUND_POSITION_OPTIONS, bg.position)}
+      ${selectField('Scroll', 'backgroundAttachment', BACKGROUND_ATTACHMENT_OPTIONS, bg.attachment)}
+    </div>
     <label class="admin-check"><input type="checkbox" name="backgroundRepeat"${bg.repeat === 'repeat' ? ' checked' : ''}> Tile (repeat)</label>
-    ${selectField('Scroll', 'backgroundAttachment', BACKGROUND_ATTACHMENT_OPTIONS, bg.attachment)}
-    <div class="admin-actions"><button type="submit" class="admin-button">Save background options</button></div>
+    <div class="admin-actions"><button type="submit" class="admin-button">Save background</button></div>
   </form>
 </details>`;
 }

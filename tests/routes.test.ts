@@ -522,6 +522,9 @@ test('admin can upload, configure, and remove a per-theme background', async (t)
       backgroundPosition: 'bottom right',
       backgroundRepeat: 'on',
       backgroundAttachment: 'fixed',
+      backgroundOpacity: '40',
+      backgroundColorEnabled: 'on',
+      backgroundColor: '#112233',
     }),
   });
   assert.equal(options.status, 302);
@@ -530,6 +533,8 @@ test('admin can upload, configure, and remove a per-theme background', async (t)
   assert.equal(configured.position, 'bottom right');
   assert.equal(configured.repeat, 'repeat');
   assert.equal(configured.attachment, 'fixed');
+  assert.equal(configured.opacity, 40);
+  assert.equal(configured.color, '#112233');
 
   const invalid = await ctx.app.request('/admin/background/options', {
     method: 'POST',
@@ -547,6 +552,42 @@ test('admin can upload, configure, and remove a per-theme background', async (t)
   });
   assert.equal(removed.status, 302);
   assert.equal(getTheme(ctx.db).backgroundImageDark.imagePath, null);
+});
+
+test('background colour and opacity are validated and can be cleared', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS };
+
+  const save = (fields: Record<string, string>) =>
+    ctx.app.request('/admin/background/options', {
+      method: 'POST',
+      headers,
+      body: formBody({
+        csrf,
+        theme: 'light',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'scroll',
+        ...fields,
+      }),
+    });
+
+  // An out-of-range opacity and a non-hex colour are rejected, keeping defaults.
+  await save({ backgroundOpacity: '500', backgroundColorEnabled: 'on', backgroundColor: 'nope' });
+  const rejected = getTheme(ctx.db).backgroundImageLight;
+  assert.equal(rejected.opacity, 100);
+  assert.equal(rejected.color, null);
+
+  // A valid colour + opacity are stored.
+  await save({ backgroundOpacity: '30', backgroundColorEnabled: 'on', backgroundColor: '#aabbcc' });
+  assert.equal(getTheme(ctx.db).backgroundImageLight.color, '#aabbcc');
+  assert.equal(getTheme(ctx.db).backgroundImageLight.opacity, 30);
+
+  // Unchecking the box clears the colour.
+  await save({ backgroundOpacity: '30', backgroundColor: '#aabbcc' });
+  assert.equal(getTheme(ctx.db).backgroundImageLight.color, null);
 });
 
 test('saving the profile preserves the favicon and background settings', async (t) => {
