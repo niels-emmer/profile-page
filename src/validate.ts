@@ -42,7 +42,12 @@ export function isBackgroundAttachment(value: unknown): value is BackgroundAttac
   return oneOf(BACKGROUND_ATTACHMENTS, value);
 }
 
+/** Control characters (incl. CR/LF) are never valid in a URL or asset path. */
+const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
+
 export function isHttpUrl(value: string): boolean {
+  // `new URL()` strips CR/LF during parsing, so reject them on the raw value.
+  if (CONTROL_CHARS.test(value)) return false;
   try {
     const url = new URL(value);
     return url.protocol === 'http:' || url.protocol === 'https:';
@@ -56,7 +61,12 @@ export function isHttpUrl(value: string): boolean {
  * URLs are rejected because the CSP only permits `img-src 'self'`.
  */
 export function isSafeAssetRef(value: string): boolean {
-  return value.startsWith('/assets/') && !value.includes('..') && !value.includes('\\');
+  return (
+    value.startsWith('/assets/') &&
+    !value.includes('..') &&
+    !value.includes('\\') &&
+    !CONTROL_CHARS.test(value)
+  );
 }
 
 /** Reject traversal attempts before they reach the static file handler. */

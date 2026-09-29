@@ -46,6 +46,75 @@ test('seeding is idempotent and preserves later edits', async (t) => {
   assert.equal(listLinks(ctx.db).length, 0);
 });
 
+test('crawler files are served with the right content types', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+
+  const robots = await ctx.app.request('/robots.txt');
+  assert.equal(robots.status, 200);
+  assert.match(robots.headers.get('content-type') ?? '', /text\/plain/);
+  assert.match(await robots.text(), /Sitemap: .*\/sitemap\.xml/);
+
+  const sitemap = await ctx.app.request('/sitemap.xml');
+  assert.equal(sitemap.status, 200);
+  assert.match(sitemap.headers.get('content-type') ?? '', /application\/xml/);
+  assert.match(await sitemap.text(), /<loc>.*<\/loc>/);
+
+  const llms = await ctx.app.request('/llms.txt');
+  assert.equal(llms.status, 200);
+  assert.match(llms.headers.get('content-type') ?? '', /text\/plain/);
+  assert.match(await llms.text(), /^# Alex Rivera/);
+});
+
+test('contact endpoints serve a vCard, JSON, and WebFinger', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+
+  const vcf = await ctx.app.request('/contact.vcf');
+  assert.equal(vcf.status, 200);
+  assert.match(vcf.headers.get('content-type') ?? '', /text\/vcard/);
+  assert.match(vcf.headers.get('content-disposition') ?? '', /attachment; filename="alex-rivera\.vcf"/);
+  const vcfBody = await vcf.text();
+  assert.match(vcfBody, /BEGIN:VCARD/);
+  assert.match(vcfBody, /FN:Alex Rivera/);
+
+  const json = await ctx.app.request('/contact.json');
+  assert.equal(json.status, 200);
+  assert.match(json.headers.get('content-type') ?? '', /application\/json/);
+  assert.equal(json.headers.get('access-control-allow-origin'), '*');
+  assert.equal((JSON.parse(await json.text()) as { name: string }).name, 'Alex Rivera');
+
+  const wf = await ctx.app.request('/.well-known/webfinger?resource=acct:me@localhost');
+  assert.equal(wf.status, 200);
+  assert.match(wf.headers.get('content-type') ?? '', /application\/jrd\+json/);
+  assert.equal((JSON.parse(await wf.text()) as { subject: string }).subject, 'acct:me@localhost');
+
+  const unknown = await ctx.app.request('/.well-known/webfinger?resource=acct:someone@else.com');
+  assert.equal(unknown.status, 404);
+
+  const missing = await ctx.app.request('/.well-known/webfinger');
+  assert.equal(missing.status, 400);
+});
+
+test('a malformed x-forwarded-host falls back to the request host', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const res = await ctx.app.request('/contact.json', {
+    headers: { 'x-forwarded-host': ' ' },
+  });
+  const data = JSON.parse(await res.text()) as { url: string };
+  assert.ok(data.url.includes('localhost'), `unexpected url: ${data.url}`);
+});
+
+test('the homepage advertises the contact representations via Link headers', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const res = await ctx.app.request('/');
+  const link = res.headers.get('link') ?? '';
+  assert.match(link, /<\/contact\.vcf>; rel="alternate"; type="text\/vcard"/);
+  assert.match(link, /<\/contact\.json>; rel="alternate"; type="application\/json"/);
+});
+
 test('security headers are set on every response', async (t) => {
   const ctx = makeTestApp();
   t.after(() => ctx.cleanup());

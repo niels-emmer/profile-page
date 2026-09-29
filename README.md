@@ -3,9 +3,11 @@
 [![CI](https://github.com/niels-emmer/profile-page/actions/workflows/ci.yml/badge.svg)](https://github.com/niels-emmer/profile-page/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A minimal, self-hosted, single-user **profile page** — a lightweight replacement
-for LinkStack. One small container, one SQLite file, an online admin editor, and
-a pixel-faithful link-in-bio page.
+**A link-in-bio page that's yours — not a SaaS account.** One small container, one
+SQLite file, two runtime dependencies, and no build step. Self-host it behind your
+reverse proxy, point your domain at it, and edit everything from a built-in admin
+panel. It's a drop-in replacement for LinkStack and hosted link-in-bio services:
+the same idea, a fraction of the footprint, and your data stays on your own disk.
 
 <p align="center">
   <img src="docs/screenshot-dark.png" alt="Profile page, dark theme" width="380">
@@ -14,63 +16,73 @@ a pixel-faithful link-in-bio page.
 
 | | |
 |---|---|
-| **Image size** | ~50 MB (Alpine + Node, no build step) |
+| **Image size** | ~170 MB on disk (~60 MB compressed) |
 | **Runtime deps** | 2 (`hono`, `@hono/node-server`) |
 | **Storage** | SQLite (`node:sqlite`) + local uploads |
 | **Frontend** | Server-rendered HTML + one CSS file. No JS framework. |
 
 ## Features
 
-- Public profile page at `/` with name, tagline, description, avatar and a list
+- **Public profile page** at `/` — name, tagline, description, avatar, and a list
   of link buttons.
-- Online editor at `/admin` (login required) — edit text, upload an avatar,
-  add/reorder/delete links, pick button colours.
-- **Custom favicon** — upload one and it is centre-cropped to a 512×512 PNG in the
-  browser (plus an `apple-touch-icon`), or remove it to fall back to the bundled
-  default.
-- **Per-theme background images** — upload a separate image for the dark and light
-  schemes, choose how it is placed (fill, fit, stretch, original size), anchored
-  (nine positions), tiled, and whether it scrolls or stays fixed. Uploads are
-  downscaled and converted to WebP in the browser for fast loading.
-- **Drag to reorder** links with the handle on the right of each card; the
-  Move up/down buttons remain for keyboard and no-JS use.
-- One-click **backup and restore** — download the whole profile (content, theme,
-  and images) as a `.tar.gz`, and restore it later.
-- Colour helpers: curated colour schemes, or generate a solid/gradient button
-  from a single base colour with an automatically readable text colour.
-- Dark and light themes that follow the visitor's OS preference.
-- No admin or login link is exposed on the public page — navigate to `/admin`
-  directly.
-- Ships with a **representative demo profile** (a placeholder person and a few
-  example links) so a fresh install is not an empty page. Personal content is
-  never committed: it lives in the gitignored `data/` directory.
+- **Built-in admin editor** at `/admin` — edit everything from the browser; no
+  config files, no redeploys.
+- **Custom favicon and per-theme backgrounds** — upload an image and it's resized
+  and converted in your browser (512×512 PNG favicon, WebP backgrounds), with
+  fill/fit/stretch, nine anchor points, tiling, and scroll/fixed.
+- **Drag to reorder** links, with Move up/down buttons for keyboard and no-JS use.
+- **One-click backup & restore** — download the whole profile (content, theme, and
+  images) as a `.tar.gz`, and restore it later.
+- **Dark and light themes** that follow the visitor's OS preference.
+- **Crawler- and agent-friendly** — `robots.txt`, `sitemap.xml`, `llms.txt`, a
+  canonical link, `theme-color`, and schema.org `Person` JSON-LD.
+- **Contact exchange** — a one-click vCard (`/contact.vcf`), a JSON summary
+  (`/contact.json`), and a WebFinger probe (`/.well-known/webfinger`).
+- **Tiny and dependency-light** — two runtime dependencies, no build step,
+  TypeScript run directly by Node.
+- **Hardened container** — non-root, read-only root filesystem, `cap_drop: ALL`,
+  and no published ports.
 
-## Requirements
+## Quick start
 
-- **Docker** with Compose (recommended), or **Node.js >= 24** for a local run.
-- A reverse proxy that terminates TLS (e.g. Nginx Proxy Manager, Caddy, Traefik)
-  for public deployments.
-
-## Quick start (Docker)
+### Docker (recommended)
 
 ```bash
 git clone https://github.com/niels-emmer/profile-page.git
 cd profile-page
-cp .env.example .env
-# optional: set ADMIN_PASSWORD in .env; otherwise one is generated on first run
+cp .env.example .env              # optionally set ADMIN_PASSWORD
+docker network create proxy-net   # once, if it doesn't exist
 docker compose up -d --build
-docker compose logs profile-page   # first-run password is printed here if generated
+docker compose logs profile-page  # first-run password is printed here if generated
 ```
 
-The container joins the external `proxy-net` network and listens on port `3000`.
-Point your reverse proxy (e.g. Nginx Proxy Manager) at `http://profile-page:3000`.
-Create the network once if it does not exist:
+The container joins the external `proxy-net` network and listens on port `3000`;
+**no ports are published**. Point your reverse proxy at `http://profile-page:3000`.
 
-```bash
-docker network create proxy-net
+### Behind a reverse proxy
+
+Any TLS-terminating proxy works (Nginx Proxy Manager, Caddy, Traefik). For Nginx:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name example.com;
+
+    location / {
+        proxy_pass http://profile-page:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        # Overwrite, do not append, so the app sees a trustworthy client IP.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 ```
 
-## Quick start (local)
+Set `BASE_URL=https://example.com` in `.env` so absolute URLs (canonical,
+`og:url`, sitemap, vCard) are correct.
+
+### Local (no Docker)
 
 ```bash
 npm install
@@ -78,32 +90,31 @@ npm run seed      # create the database and demo profile
 npm start         # http://localhost:3000
 ```
 
-## Seeding personal content
+Requires **Node.js >= 24** — the app runs TypeScript directly, with no build step.
 
-On first run the app seeds a demo profile ("Alex Rivera" and a few example
-links) so you can see the layout immediately. Edit it in `/admin`, or replace it
-wholesale with a seed file: copy `personal-seed.example.json`, fill it in, and
-apply it:
+## Build, debug, develop
 
 ```bash
-cp personal-seed.example.json data/personal-seed.json
-# edit data/personal-seed.json, then:
-node src/seed.ts data/personal-seed.json
+npm run dev        # watch mode (node --watch)
+npm test           # node:test suite
+npm run typecheck  # tsc --noEmit
+npm run seed       # create the database + demo profile
 ```
 
-A seed replaces the profile, theme, and all links. Image paths in the seed refer
-to files under `data/uploads/`, so the JSON and its uploads must travel together.
-Both live in the gitignored `data/` directory and are never committed.
+- **No build step.** `src/*.ts` is executed directly by Node's type stripping;
+  `npm start` runs `node src/server.ts`.
+- **Docker build:** `docker build -t profile-page .` — multi-stage, production
+  dependencies only.
+- **Debugging:** the app logs to stdout (`docker compose logs -f profile-page`).
+  `GET /health` returns `200 ok` and backs the container healthcheck. If port 3000
+  is taken locally, set `PORT` (e.g. `PORT=3999 npm start`).
+- **Data:** everything stateful lives in `DATA_DIR` (`./data` locally, `/data` in
+  the container) — `profile.db` plus `uploads/`. It is gitignored; never commit it.
+- **Layout:** `src/` (server, routes, render, db, auth, upload, backup),
+  `public/` (CSS, fonts, icons), `tests/` (`node:test`), `docs/`.
 
-## Development
-
-```bash
-npm test          # node:test suite (auth, colours, uploads, render, routes)
-npm run typecheck # tsc --noEmit
-npm run dev       # watch mode
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The project deliberately
+keeps **exactly two runtime dependencies** — prefer the Node standard library.
 
 ## Configuration
 
@@ -116,23 +127,50 @@ All configuration is via environment variables (see `.env.example`).
 | `ADMIN_PASSWORD` | *(generated)* | Admin password. If unset, a random one is generated on first run and logged once. |
 | `SESSION_SECRET` | *(generated)* | Cookie signing secret. Generated and persisted if unset. |
 | `SECURE_COOKIES` | `true` in production | Adds the `Secure` flag to session cookies. Set `false` only for plain-HTTP local development. |
-| `BASE_URL` | *(request host)* | Public base URL for meta tags. |
+| `BASE_URL` | *(request host)* | Public base URL for absolute URLs in meta tags and discovery files. |
+
+## Seeding personal content
+
+On first run the app seeds a demo profile ("Alex Rivera" and a few example links)
+so a fresh install isn't empty. Edit it in `/admin`, or replace it wholesale with
+a seed file:
+
+```bash
+cp personal-seed.example.json data/personal-seed.json
+# edit data/personal-seed.json, then:
+node src/seed.ts data/personal-seed.json
+```
+
+A seed replaces the profile, theme, and all links. Image paths refer to files
+under `data/uploads/`, so the JSON and its uploads travel together. Both live in
+the gitignored `data/` directory and are never committed.
 
 ## Security
 
-See [SECURITY.md](SECURITY.md). Highlights: scrypt password hashing,
-signed HttpOnly `SameSite=Lax` cookies, CSRF protection, login rate limiting,
-upload validation, strict security headers, parameterised SQL, and a non-root,
-read-only container.
+See [SECURITY.md](SECURITY.md). Highlights: scrypt password hashing, signed
+HttpOnly `SameSite=Lax` cookies, CSRF protection, login rate limiting, upload
+validation, strict security headers, parameterised SQL, and a non-root, read-only
+container.
 
 ## Documentation
 
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — reverse proxy, backups, upgrades
+- [docs/API.md](docs/API.md) — routes, data model, seed format, discovery endpoints
 - [SECURITY.md](SECURITY.md) — threat model and hardening
-- [docs/API.md](docs/API.md) — routes, data model, and seed format
 - [docs/THIRD-PARTY.md](docs/THIRD-PARTY.md) — bundled assets and licenses
+
+## Credits
+
+- **Design inspiration:** [LinkStack](https://linkstack.org/) (MIT). The public
+  page reimplements its look from scratch — no LinkStack code is copied.
+- **Fonts & icons:** [Inter](https://rsms.me/inter/) (OFL 1.1),
+  [Font Awesome Free 6.7.1](https://fontawesome.com/) (icons CC BY 4.0, fonts
+  OFL 1.1, code MIT), and [Simple Icons](https://simpleicons.org/) (CC0 1.0).
+- **Built with:** [Hono](https://hono.dev/) and
+  [@hono/node-server](https://github.com/honojs/node-server) (MIT), plus Node's
+  built-in `node:sqlite`.
+- Full third-party details: [docs/THIRD-PARTY.md](docs/THIRD-PARTY.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Bundled third-party assets are listed in
-[docs/THIRD-PARTY.md](docs/THIRD-PARTY.md).
+MIT — see [LICENSE](LICENSE).

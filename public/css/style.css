@@ -143,6 +143,21 @@ button {
   outline: 0;
 }
 
+/* Contact link */
+.contact-link {
+  margin: 0.5rem 0 2rem;
+  font-size: 14px;
+}
+.contact-link a {
+  color: var(--fg);
+  opacity: 0.6;
+  text-decoration: none;
+}
+.contact-link a:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
 /* Icons */
 .icon {
   padding: 0 8px 3.5px 0;

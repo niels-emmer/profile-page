@@ -3,10 +3,13 @@ import { test } from 'node:test';
 import {
   backgroundValue,
   escapeHtml,
-  faviconMime,
+  imageMime,
   renderAdminPage,
+  renderLlmsTxt,
   renderLoginPage,
   renderProfilePage,
+  renderRobotsTxt,
+  renderSitemap,
   sanitizeCss,
 } from '../src/render.ts';
 import type { BackgroundSettings, Link, Profile, ThemeSettings } from '../src/types.ts';
@@ -97,13 +100,13 @@ test('renderProfilePage renders image and font-awesome icons', () => {
   assert.match(html, /class="icon hvr-icon fa-brands fa-github"/);
 });
 
-test('faviconMime maps the file extension to a MIME type', () => {
-  assert.equal(faviconMime('/assets/favicon.png'), 'image/png');
-  assert.equal(faviconMime('/assets/uploads/x.jpg'), 'image/jpeg');
-  assert.equal(faviconMime('/assets/uploads/x.jpeg'), 'image/jpeg');
-  assert.equal(faviconMime('/assets/uploads/x.webp'), 'image/webp');
-  assert.equal(faviconMime('/assets/uploads/x.svg'), 'image/svg+xml');
-  assert.equal(faviconMime('/assets/uploads/x'), 'image/png');
+test('imageMime maps the file extension to a MIME type', () => {
+  assert.equal(imageMime('/assets/favicon.png'), 'image/png');
+  assert.equal(imageMime('/assets/uploads/x.jpg'), 'image/jpeg');
+  assert.equal(imageMime('/assets/uploads/x.jpeg'), 'image/jpeg');
+  assert.equal(imageMime('/assets/uploads/x.webp'), 'image/webp');
+  assert.equal(imageMime('/assets/uploads/x.svg'), 'image/svg+xml');
+  assert.equal(imageMime('/assets/uploads/x'), 'image/png');
 });
 
 test('backgroundValue layers the image over the base and defaults to the base alone', () => {
@@ -135,6 +138,65 @@ test('renderProfilePage emits the favicon MIME, apple-touch-icon, and background
   assert.match(html, /<link rel="icon" type="image\/webp" href="\/assets\/uploads\/fav\.webp">/);
   assert.match(html, /<link rel="apple-touch-icon" href="\/assets\/uploads\/fav\.webp">/);
   assert.match(html, /--bg:url\(\/assets\/uploads\/dark\.webp\) center\/cover no-repeat scroll, #000000/);
+});
+
+test('renderProfilePage emits canonical, theme-color, and Person JSON-LD', () => {
+  const html = renderProfilePage({ profile, links: [link], theme, baseUrl: 'https://example.com' });
+  assert.match(html, /<link rel="canonical" href="https:\/\/example\.com\/">/);
+  assert.match(html, /<meta name="theme-color" content="#0085ff">/);
+  assert.match(html, /<link rel="alternate" type="text\/vcard" href="\/contact\.vcf">/);
+  assert.match(html, /<link rel="alternate" type="application\/json" href="\/contact\.json">/);
+  assert.match(html, /<link rel="me" href="https:\/\/github\.com\/example">/);
+  assert.match(html, /<p class="contact-link"><a href="\/contact\.vcf">Add to contacts<\/a><\/p>/);
+  assert.match(html, /<script type="application\/ld\+json">/);
+  const json = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)?.[1] ?? '';
+  const data = JSON.parse(json) as { '@type': string; name: string; url: string; sameAs: string[] };
+  assert.equal(data['@type'], 'Person');
+  assert.equal(data.name, 'Test <User>');
+  assert.equal(data.url, 'https://example.com/');
+  assert.deepEqual(data.sameAs, ['https://github.com/example']);
+});
+
+test('JSON-LD cannot break out of the script element', () => {
+  const html = renderProfilePage({
+    profile: { ...profile, name: '</script><script>alert(1)</script>' },
+    links: [],
+    theme,
+    baseUrl: 'https://example.com',
+  });
+  assert.ok(!html.includes('</script><script>alert(1)'));
+  assert.match(html, /\\u003c\/script>/);
+});
+
+test('renderRobotsTxt allows the page and points at the sitemap', () => {
+  const txt = renderRobotsTxt('https://example.com');
+  assert.match(txt, /User-agent: \*/);
+  assert.match(txt, /Allow: \//);
+  assert.match(txt, /Disallow: \/admin/);
+  assert.match(txt, /Sitemap: https:\/\/example\.com\/sitemap\.xml/);
+});
+
+test('renderSitemap lists the canonical URL', () => {
+  const xml = renderSitemap('https://example.com');
+  assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
+  assert.match(xml, /<loc>https:\/\/example\.com\/<\/loc>/);
+});
+
+test('renderLlmsTxt summarises the profile and links', () => {
+  const txt = renderLlmsTxt(profile, [link], 'https://example.com');
+  assert.match(txt, /^# Test <User>/);
+  assert.match(txt, /- \[GitHub\]\(https:\/\/github\.com\/example\)/);
+  assert.match(txt, /Canonical page: https:\/\/example\.com\//);
+});
+
+test('renderLlmsTxt escapes markdown-breaking characters', () => {
+  const txt = renderLlmsTxt(
+    { ...profile, name: 'A\nB' },
+    [{ ...link, text: 'Bad](x) [link' }],
+    'https://example.com',
+  );
+  assert.match(txt, /^# A B/);
+  assert.match(txt, /- \[Badx link\]\(https:\/\/github\.com\/example\)/);
 });
 
 test('renderLoginPage includes the CSRF token and error message', () => {
