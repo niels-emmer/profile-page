@@ -70,6 +70,16 @@ test('renderVCard strips control characters so a URL cannot inject properties', 
   assert.match(vcf, /URL:https:\/\/example\.com\/aEMAIL:attacker@example\.com/);
 });
 
+test('renderVCard lists the profile URL before the links', () => {
+  const vcf = renderVCard(profile, [link], 'https://example.com');
+  // The profile page's own URL comes immediately before the profile's links.
+  assert.match(vcf, /\r\nURL:https:\/\/example\.com\/\r\nURL:https:\/\/github\.com\/example\r\n/);
+
+  // It is present even when the profile has no links.
+  const solo = renderVCard(profile, [], 'https://example.com');
+  assert.match(solo, /\r\nURL:https:\/\/example\.com\/\r\n/);
+});
+
 test('renderWebFinger returns undefined for a malformed base URL', () => {
   assert.equal(renderWebFinger(profile, [], 'not a url', 'acct:me@example.com'), undefined);
 });
