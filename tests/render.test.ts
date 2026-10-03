@@ -345,3 +345,38 @@ test('renderAdminPage includes the favicon, background, and drag-reorder control
   assert.match(html, /class="drag-handle"/);
   assert.match(html, /data-id="1"/);
 });
+
+test('renderProfilePage links the avatar to a QR modal for the page URL', () => {
+  const html = renderProfilePage({ profile, links: [], theme, baseUrl: 'https://example.com' });
+  assert.match(
+    html,
+    /<a class="avatar-link" href="#qr" data-qr-open aria-haspopup="dialog" aria-label="Show QR code for this page">/,
+  );
+  assert.match(html, /<div id="qr" class="qr-modal" role="dialog" aria-modal="true" aria-label="Share this page">/);
+  assert.match(html, /class="qr-code-svg"/);
+  assert.match(html, /aria-label="QR code linking to https:\/\/example\.com\/"/);
+  assert.match(html, /<p class="qr-url">example\.com<\/p>/);
+  assert.match(
+    html,
+    /<p class="qr-cta"><a href="https:\/\/github\.com\/niels-emmer\/profile-page" target="_blank" rel="noopener noreferrer">Get your own profile page<\/a><\/p>/,
+  );
+  assert.match(html, /<script src="\/assets\/js\/qr\.js" defer><\/script>/);
+});
+
+test('the QR modal shows the URL without its scheme', () => {
+  const html = renderProfilePage({ profile, links: [], theme, baseUrl: 'http://localhost:3000' });
+  assert.match(html, /<p class="qr-url">localhost:3000<\/p>/);
+  assert.doesNotMatch(html, /class="qr-url">https?:\/\//);
+});
+
+test('renderProfilePage omits the QR feature when the URL cannot be encoded', () => {
+  const html = renderProfilePage({
+    profile,
+    links: [],
+    theme,
+    baseUrl: 'https://' + 'a'.repeat(3000),
+  });
+  assert.doesNotMatch(html, /qr-modal/);
+  assert.doesNotMatch(html, /data-qr-open/);
+  assert.match(html, /<img alt="avatar" id="avatar" class="rounded-avatar fadein"/);
+});

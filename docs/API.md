@@ -7,7 +7,7 @@ HTTP routes, the SQLite schema, and the seed-file format.
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/` | public | Rendered profile page (includes canonical, `theme-color`, and schema.org `Person` JSON-LD) |
+| `GET` | `/` | public | Rendered profile page (includes canonical, `theme-color`, schema.org `Person` JSON-LD, and the avatar QR-share modal) |
 | `GET` | `/health` | public | `200 ok` |
 | `GET` | `/robots.txt` | public | `text/plain`; allows the page, disallows `/admin` and `/login`, points at the sitemap |
 | `GET` | `/sitemap.xml` | public | `application/xml`; single-URL sitemap for the canonical page |

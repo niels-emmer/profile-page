@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **QR code share modal**: clicking the avatar opens a modal with a QR code for
+  the page URL, the URL shown as text (without its scheme), and a "Get your own
+  profile page" link to the project. The QR is generated server-side by a
+  dependency-free encoder (`src/qr.ts`) and drawn as inline SVG; the modal works
+  without JavaScript (CSS `:target`), with a small script adding focus handling
+  and Escape.
 - **Link icon upload**: in the link editor, choosing **Image path** shows an
   **Upload icon** button that resizes/converts the graphic in the browser,
   uploads it, and fills the icon path field. Choosing **Font Awesome** shows a

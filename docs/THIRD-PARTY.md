@@ -28,6 +28,13 @@ The public page reimplements the look of [LinkStack](https://linkstack.org/)
 (MIT). No LinkStack code is copied; the CSS in `public/css/style.css` is written
 from scratch. The verified-badge SVG is a LinkStack asset (MIT).
 
+## Development-time references
+
+- [Project Nayuki's qrcodegen](https://www.nayuki.io/page/qr-code-generator-library)
+  (MIT) — used only to generate the QR Code reference vectors and version sweep
+  in `tests/qr.test.ts`. No code is vendored; the encoder in `src/qr.ts` is
+  written from scratch to ISO/IEC 18004.
+
 ## Attribution notes
 
 - **Font Awesome Free** — icons are CC BY 4.0 and require attribution; the
