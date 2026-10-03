@@ -93,6 +93,11 @@ Reuse these classes; do not invent new ones for the same job.
   download button is not orphaned above unrelated text.
 - **Long forms are grouped, not dumped.** The Background section groups image,
   appearance (opacity + colour), and placement.
+- **Machine-facing facts get their own card.** The optional identity facts (job
+  title, employer, alumni, expertise, public email/phone) are published as
+  structured data, not shown on the page, so they live in an **Identity &
+  discoverability** card — separate from the Profile card — with an explanation of
+  where each value is published.
 - **Confirm before destroying.** `data-confirm` on a form triggers a
   `window.confirm` (see `admin.js`); destructive buttons use `--danger`.
 

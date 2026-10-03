@@ -1,16 +1,26 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULT_BACKGROUND, DEFAULT_THEME } from './defaults.ts';
-import { createLink, deleteLink, listLinks, saveProfile, saveTheme } from './db.ts';
-import type { BackgroundSettings, NewLink, Profile, SeedFile, ThemeSettings } from './types.ts';
+import { createLink, deleteLink, listLinks, saveEntity, saveProfile, saveTheme } from './db.ts';
+import type {
+  BackgroundSettings,
+  EntitySettings,
+  NewLink,
+  Profile,
+  SeedFile,
+  ThemeSettings,
+} from './types.ts';
 import {
+  cleanText,
   isBackgroundAttachment,
   isBackgroundPosition,
   isBackgroundRepeat,
   isBackgroundSize,
+  isEmail,
   isHexColor,
   isHttpUrl,
   isOpacity,
   isSafeAssetRef,
+  isTelephone,
   isThemeMode,
 } from './validate.ts';
 
@@ -83,7 +93,35 @@ export function parseSeed(raw: unknown): SeedFile {
   return {
     profile: profile as Profile,
     theme: normalizeTheme(theme),
+    entity: normalizeEntity(obj['entity']),
     links: links as NewLink[],
+  };
+}
+
+/** Fill in defaults for identity fields missing from older backups. */
+function normalizeEntity(raw: unknown): EntitySettings {
+  const obj = asObject(raw);
+  const text = (key: string, max: number): string => {
+    const value = obj[key];
+    return typeof value === 'string' ? cleanText(value, max) : '';
+  };
+  const list = (key: string): string[] => {
+    const value = obj[key];
+    if (!Array.isArray(value)) return [];
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => cleanText(item, 120))
+      .filter((item) => item.length > 0)
+      .slice(0, 25);
+  };
+  return {
+    alternateName: text('alternateName', 100),
+    jobTitle: text('jobTitle', 100),
+    worksFor: text('worksFor', 120),
+    alumniOf: list('alumniOf'),
+    knowsAbout: list('knowsAbout'),
+    email: text('email', 254),
+    telephone: text('telephone', 32),
   };
 }
 
@@ -111,13 +149,20 @@ export function validateSeed(seed: SeedFile): void {
       throw new Error(`Invalid icon image path: ${link.iconValue}`);
     }
   }
+  if (seed.entity.email.length > 0 && !isEmail(seed.entity.email)) {
+    throw new Error(`Invalid contact email: ${seed.entity.email}`);
+  }
+  if (seed.entity.telephone.length > 0 && !isTelephone(seed.entity.telephone)) {
+    throw new Error(`Invalid contact telephone: ${seed.entity.telephone}`);
+  }
 }
 
-/** Replace the profile, theme, and all links with the seed's contents. */
+/** Replace the profile, theme, identity, and all links with the seed's contents. */
 export function applySeed(database: DatabaseSync, seed: SeedFile): void {
   validateSeed(seed);
   saveProfile(database, seed.profile);
   saveTheme(database, seed.theme);
+  saveEntity(database, seed.entity);
   for (const link of listLinks(database)) deleteLink(database, link.id);
   for (const link of seed.links) createLink(database, link);
 }

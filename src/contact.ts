@@ -1,11 +1,14 @@
 /**
  * Machine-readable contact representations, all derived from the profile:
  * a vCard for "add to contacts", a JSON summary, and a WebFinger probe.
- * Nothing here is personal data — it is built from the database at request time.
+ * Built from the database at request time; nothing is hard-coded. The optional
+ * public email/phone (owner opt-in, stored under `entity.*`) are published here.
  */
 
-import { avatarUrlFor, imageMime } from './render.ts';
-import type { Link, Profile } from './types.ts';
+import { DEFAULT_ENTITY } from './defaults.ts';
+import { avatarUrlFor, imageMime, splitPersonName } from './render.ts';
+import type { EntitySettings, Link, Profile } from './types.ts';
+import { isEmail, isTelephone } from './validate.ts';
 
 /** A filesystem-safe slug for the vCard filename. */
 export function vcardSlug(name: string): string {
@@ -64,10 +67,8 @@ function foldLine(line: string): string {
 
 /** Best-effort structured name: the last word is treated as the family name. */
 function structuredName(name: string): string {
-  const trimmed = name.trim();
-  const space = trimmed.lastIndexOf(' ');
-  if (space <= 0) return `${escapeVCard(trimmed)};;;;`;
-  return `${escapeVCard(trimmed.slice(space + 1))};${escapeVCard(trimmed.slice(0, space))};;;`;
+  const { givenName, familyName } = splitPersonName(name);
+  return `${escapeVCard(familyName)};${escapeVCard(givenName)};;;`;
 }
 
 /** Convert SQLite's `datetime('now')` (UTC) to an ISO 8601 timestamp. */
@@ -82,6 +83,7 @@ export function renderVCard(
   links: Link[],
   baseUrl: string,
   updatedAt?: string,
+  entity: EntitySettings = DEFAULT_ENTITY,
 ): string {
   const avatarUrl = avatarUrlFor(profile, baseUrl);
   const lines = [
@@ -90,7 +92,13 @@ export function renderVCard(
     `FN:${escapeVCard(profile.name)}`,
     `N:${structuredName(profile.name)}`,
     ...(profile.tagline.length > 0 ? [`TITLE:${escapeVCard(profile.tagline)}`] : []),
+    ...(entity.jobTitle.length > 0 ? [`ROLE:${escapeVCard(entity.jobTitle)}`] : []),
+    ...(entity.worksFor.length > 0 ? [`ORG:${escapeVCard(entity.worksFor)}`] : []),
     ...(profile.description.length > 0 ? [`NOTE:${escapeVCard(profile.description)}`] : []),
+    ...(isEmail(entity.email) ? [`EMAIL:${escapeVCard(sanitizeUri(entity.email))}`] : []),
+    ...(entity.telephone.length > 0 && isTelephone(entity.telephone)
+      ? [`TEL:${escapeVCard(sanitizeUri(entity.telephone))}`]
+      : []),
     `PHOTO;MEDIATYPE=${imageMime(profile.avatarPath ?? 'default-avatar.svg')}:${sanitizeUri(avatarUrl)}`,
     // The profile page itself is listed first, before the profile's links.
     `URL:${sanitizeUri(`${baseUrl}/`)}`,
@@ -103,7 +111,12 @@ export function renderVCard(
 }
 
 /** A JSON summary of the profile for agents. */
-export function renderContactJson(profile: Profile, links: Link[], baseUrl: string): string {
+export function renderContactJson(
+  profile: Profile,
+  links: Link[],
+  baseUrl: string,
+  entity: EntitySettings = DEFAULT_ENTITY,
+): string {
   return JSON.stringify(
     {
       name: profile.name,
@@ -112,6 +125,14 @@ export function renderContactJson(profile: Profile, links: Link[], baseUrl: stri
       url: `${baseUrl}/`,
       avatar: avatarUrlFor(profile, baseUrl),
       vcard: `${baseUrl}/contact.vcf`,
+      ...(entity.alternateName.length > 0 ? { alternateName: entity.alternateName } : {}),
+      ...(entity.jobTitle.length > 0 ? { jobTitle: entity.jobTitle } : {}),
+      ...(entity.worksFor.length > 0 ? { worksFor: entity.worksFor } : {}),
+      ...(entity.alumniOf.length > 0 ? { alumniOf: entity.alumniOf } : {}),
+      ...(entity.knowsAbout.length > 0 ? { knowsAbout: entity.knowsAbout } : {}),
+      ...(isEmail(entity.email) ? { email: entity.email } : {}),
+      ...(isTelephone(entity.telephone) ? { telephone: entity.telephone } : {}),
+      sameAs: links.map((link) => link.url),
       links: links.map((link) => ({ text: link.text, url: link.url })),
     },
     null,

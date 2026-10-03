@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import type { Config } from './config.ts';
 import { DEFAULT_BACKGROUND, DEFAULT_PROFILE, DEFAULT_SEED, DEFAULT_THEME } from './defaults.ts';
-import type { BackgroundSettings, Link, NewLink, Profile, ThemeSettings } from './types.ts';
+import type { BackgroundSettings, EntitySettings, Link, NewLink, Profile, ThemeSettings } from './types.ts';
 import {
   isBackgroundAttachment,
   isBackgroundPosition,
@@ -307,7 +307,41 @@ export function ensureSeeded(db: DatabaseSync): void {
   if (hasProfile) return;
   saveProfile(db, DEFAULT_SEED.profile);
   saveTheme(db, DEFAULT_SEED.theme);
+  saveEntity(db, DEFAULT_SEED.entity);
   for (const link of DEFAULT_SEED.links) createLink(db, link);
+}
+
+/* --------------------------- identity / entity ------------------------- */
+
+/** Split a stored newline list back into a trimmed array. */
+function splitSetting(value: string | undefined): string[] {
+  if (value === undefined) return [];
+  return value
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
+export function getEntity(db: DatabaseSync): EntitySettings {
+  return {
+    alternateName: getSetting(db, 'entity.alternateName') ?? '',
+    jobTitle: getSetting(db, 'entity.jobTitle') ?? '',
+    worksFor: getSetting(db, 'entity.worksFor') ?? '',
+    alumniOf: splitSetting(getSetting(db, 'entity.alumniOf')),
+    knowsAbout: splitSetting(getSetting(db, 'entity.knowsAbout')),
+    email: getSetting(db, 'entity.email') ?? '',
+    telephone: getSetting(db, 'entity.telephone') ?? '',
+  };
+}
+
+export function saveEntity(db: DatabaseSync, entity: EntitySettings): void {
+  setSetting(db, 'entity.alternateName', entity.alternateName);
+  setSetting(db, 'entity.jobTitle', entity.jobTitle);
+  setSetting(db, 'entity.worksFor', entity.worksFor);
+  setSetting(db, 'entity.alumniOf', entity.alumniOf.join('\n'));
+  setSetting(db, 'entity.knowsAbout', entity.knowsAbout.join('\n'));
+  setSetting(db, 'entity.email', entity.email);
+  setSetting(db, 'entity.telephone', entity.telephone);
 }
 
 /* -------------------------------- auth --------------------------------- */

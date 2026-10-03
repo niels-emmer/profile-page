@@ -25,12 +25,14 @@ import { DEFAULT_THEME } from './defaults.ts';
 import {
   createLink,
   deleteLink,
+  getEntity,
   getProfile,
   getProfileUpdatedAt,
   getTheme,
   listLinks,
   reorderLinks,
   saveAuth,
+  saveEntity,
   saveProfile,
   saveTheme,
   updateLink,
@@ -48,15 +50,19 @@ import {
 import type { BackgroundSettings, NewLink, ThemeSettings } from './types.ts';
 import { MAX_BACKGROUND_BYTES, UploadError, deleteUpload, saveImage } from './upload.ts';
 import {
+  cleanText,
   isBackgroundAttachment,
   isBackgroundPosition,
   isBackgroundSize,
+  isEmail,
   isHexColor,
   isHttpUrl,
   isOpacity,
   isSafeAssetPath,
   isSafeAssetRef,
+  isTelephone,
   isThemeMode,
+  parseLines,
 } from './validate.ts';
 
 export interface AppDeps {
@@ -86,6 +92,7 @@ const CSP = [
 const HOST_PATTERN = /^[a-z0-9.-]+(:\d+)?$/i;
 
 const LOGIN_BODY_LIMIT = 16 * 1024;
+const TEXT_BODY_LIMIT = 64 * 1024;
 const AVATAR_BODY_LIMIT = 6 * 1024 * 1024;
 const IMAGE_BODY_LIMIT = 6 * 1024 * 1024;
 const BACKGROUND_BODY_LIMIT = MAX_BACKGROUND_BYTES + 1024 * 1024;
@@ -275,6 +282,7 @@ export function createApp(deps: AppDeps): Hono {
         profile: getProfile(db),
         links: listLinks(db),
         theme: getTheme(db),
+        entity: getEntity(db),
         baseUrl: requestBaseUrl(c),
       }),
     );
@@ -287,25 +295,27 @@ export function createApp(deps: AppDeps): Hono {
 
   app.get('/sitemap.xml', (c) => {
     c.header('Content-Type', 'application/xml; charset=utf-8');
-    return c.body(renderSitemap(requestBaseUrl(c)));
+    return c.body(renderSitemap(requestBaseUrl(c), getProfileUpdatedAt(db)));
   });
 
   app.get('/llms.txt', (c) => {
     c.header('Content-Type', 'text/plain; charset=utf-8');
-    return c.body(renderLlmsTxt(getProfile(db), listLinks(db), requestBaseUrl(c)));
+    return c.body(renderLlmsTxt(getProfile(db), listLinks(db), requestBaseUrl(c), getEntity(db)));
   });
 
   app.get('/contact.vcf', (c) => {
     const profile = getProfile(db);
     c.header('Content-Type', 'text/vcard; charset=utf-8');
     c.header('Content-Disposition', `attachment; filename="${vcardSlug(profile.name)}.vcf"`);
-    return c.body(renderVCard(profile, listLinks(db), requestBaseUrl(c), getProfileUpdatedAt(db)));
+    return c.body(
+      renderVCard(profile, listLinks(db), requestBaseUrl(c), getProfileUpdatedAt(db), getEntity(db)),
+    );
   });
 
   app.get('/contact.json', (c) => {
     c.header('Content-Type', 'application/json; charset=utf-8');
     c.header('Access-Control-Allow-Origin', '*');
-    return c.body(renderContactJson(getProfile(db), listLinks(db), requestBaseUrl(c)));
+    return c.body(renderContactJson(getProfile(db), listLinks(db), requestBaseUrl(c), getEntity(db)));
   });
 
   app.get('/.well-known/webfinger', (c) => {
@@ -434,6 +444,7 @@ export function createApp(deps: AppDeps): Hono {
         profile: getProfile(db),
         links: listLinks(db),
         theme: getTheme(db),
+        entity: getEntity(db),
         csrfToken: ensureCsrf(c),
         saved: c.req.query('ok') !== undefined,
         passwordManagedByEnv: config.adminPassword !== undefined,
@@ -452,6 +463,34 @@ export function createApp(deps: AppDeps): Hono {
       tagline: formField(body, 'tagline').trim(),
       description: formField(body, 'description').trim(),
       avatarPath: current.avatarPath,
+    });
+    return c.redirect('/admin?ok=1');
+  });
+
+  app.post('/admin/identity', bodyLimit({ maxSize: TEXT_BODY_LIMIT }), async (c) => {
+    const body = await c.req.parseBody();
+    if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
+
+    const email = cleanText(formField(body, 'email'), 254);
+    const telephone = cleanText(formField(body, 'telephone'), 32);
+    if (email.length > 0 && !isEmail(email)) {
+      return c.redirect(
+        '/admin?error=' + encodeURIComponent('Contact email is not a valid address'),
+      );
+    }
+    if (telephone.length > 0 && !isTelephone(telephone)) {
+      return c.redirect(
+        '/admin?error=' + encodeURIComponent('Contact phone number is not valid'),
+      );
+    }
+    saveEntity(db, {
+      alternateName: cleanText(formField(body, 'alternateName'), 100),
+      jobTitle: cleanText(formField(body, 'jobTitle'), 100),
+      worksFor: cleanText(formField(body, 'worksFor'), 120),
+      alumniOf: parseLines(formField(body, 'alumniOf')),
+      knowsAbout: parseLines(formField(body, 'knowsAbout')),
+      email,
+      telephone,
     });
     return c.redirect('/admin?ok=1');
   });

@@ -97,3 +97,37 @@ export function isSafeAssetPath(path: string): boolean {
   }
   return !decoded.includes('..') && !decoded.includes('\0') && !decoded.includes('\\');
 }
+
+/* ------------------------- identity / entity text ----------------------- */
+
+/** Collapse whitespace/control characters and cap a single-line text value. */
+export function cleanText(value: string, maxLength = 200): string {
+  return value
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLength);
+}
+
+/** Parse a textarea into a list of non-empty, cleaned lines. */
+export function parseLines(value: string, maxItems = 25, maxLength = 120): string[] {
+  return value
+    .split(/\r?\n/)
+    .map((line) => cleanText(line, maxLength))
+    .filter((line) => line.length > 0)
+    .slice(0, maxItems);
+}
+
+const EMAIL = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+$/;
+
+/** A pragmatic email check; the value is published, so keep it simple. */
+export function isEmail(value: string): boolean {
+  return value.length <= 254 && EMAIL.test(value);
+}
+
+/** A pragmatic telephone check: an optional +, then digits and separators. */
+const TELEPHONE = /^\+?[0-9 ().-]{3,25}$/;
+
+export function isTelephone(value: string): boolean {
+  return TELEPHONE.test(value);
+}

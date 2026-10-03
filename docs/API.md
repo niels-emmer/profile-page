@@ -10,8 +10,8 @@ HTTP routes, the SQLite schema, and the seed-file format.
 | `GET` | `/` | public | Rendered profile page (includes canonical, `theme-color`, schema.org `Person` JSON-LD, and the avatar QR-share modal) |
 | `GET` | `/health` | public | `200 ok` |
 | `GET` | `/robots.txt` | public | `text/plain`; allows the page, disallows `/admin` and `/login`, points at the sitemap |
-| `GET` | `/sitemap.xml` | public | `application/xml`; single-URL sitemap for the canonical page |
-| `GET` | `/llms.txt` | public | `text/plain`; profile summary and links for LLM/agent crawlers |
+| `GET` | `/sitemap.xml` | public | `application/xml`; single-URL sitemap (with `lastmod`) for the canonical page |
+| `GET` | `/llms.txt` | public | `text/plain`; profile summary, identity facts, and links for LLM/agent crawlers |
 | `GET` | `/contact.vcf` | public | vCard 4.0 download (`text/vcard`, `Content-Disposition: attachment`) |
 | `GET` | `/contact.json` | public | JSON profile summary for agents (`Access-Control-Allow-Origin: *`) |
 | `GET` | `/.well-known/webfinger` | public | WebFinger JRD (RFC 7033) for `acct:me@<host>` / `acct:<slug>@<host>` / the base URL |
@@ -20,6 +20,7 @@ HTTP routes, the SQLite schema, and the seed-file format.
 | `POST` | `/logout` | public | Clears the session cookie; `302 /login` |
 | `GET` | `/admin` | session | Admin editor |
 | `POST` | `/admin/profile` | session + CSRF | Save the profile (name, tagline, description) |
+| `POST` | `/admin/identity` | session + CSRF | Save the identity facts (alternate name, job title, works for, alumni of, knows about, public email/phone) |
 | `POST` | `/admin/theme` | session + CSRF | Save the default theme mode, visitor toggle, and text colours (preserves favicon/background settings) |
 | `POST` | `/admin/avatar` | session + CSRF | Upload an avatar (multipart, max 6 MB body) |
 | `POST` | `/admin/ogimage` | session + CSRF | Upload the social preview image (multipart, max 6 MB body) |
@@ -48,12 +49,19 @@ All are derived from the profile at request time — no personal data is stored 
 the repository.
 
 - **`/contact.vcf`** — a vCard 4.0 (`FN`, `N`, `TITLE`, `NOTE`, `PHOTO`, the
-  profile URL followed by one `URL` per link, `UID`, `REV`). Values are escaped,
-  control characters stripped from URLs, and lines folded per RFC 6350. `REV` is
-  the profile's `updated_at`, so the document is stable between edits. The
-  homepage links it with `<link rel="alternate" type="text/vcard">` and a visible
-  "Add to contacts" link.
-- **`/contact.json`** — `{ name, tagline, description, url, avatar, vcard, links[] }`.
+  profile URL followed by one `URL` per link, `UID`, `REV`; plus `ROLE`, `ORG`,
+  `EMAIL`, and `TEL` when the matching identity fields are set). Values are
+  escaped, control characters stripped from URLs, and lines folded per RFC 6350.
+  `REV` is the profile's `updated_at`, so the document is stable between edits.
+  The homepage links it with `<link rel="alternate" type="text/vcard">` and a
+  visible "Add to contacts" link.
+- **`/contact.json`** — `{ name, tagline, description, url, avatar, vcard,
+  sameAs[], links[], …identity }`.
+- **Profile-page structured data** — a schema.org `ProfilePage` wrapping a
+  `Person` (`@id`, `givenName`/`familyName`, and any configured `jobTitle`,
+  `worksFor`, `alumniOf`, `knowsAbout`, `email`, `telephone`, `alternateName`,
+  plus `sameAs`), a microformats `h-card`, and Open Graph `profile` meta. The
+  identity fields are set in the admin **Identity** section.
 - **`/.well-known/webfinger`** — answers `resource=acct:me@<host>`,
   `acct:<name-slug>@<host>`, or the base URL; anything else is `404`, and a
   missing `resource` is `400` (RFC 7033 §4.2). The JRD's `subject` echoes the
@@ -61,7 +69,8 @@ the repository.
   each link as `rel="me"`.
 - The homepage also sends `Link: </contact.vcf>; rel="alternate"; type="text/vcard",
   </contact.json>; rel="alternate"; type="application/json"` and one
-  `<link rel="me">` per link.
+  `<link rel="me">` per link. `/sitemap.xml` carries a `lastmod`, and `/llms.txt`
+  carries a `Facts` block plus the machine endpoints.
 
 ## Database schema
 
@@ -197,6 +206,11 @@ idempotent and never overwrites existing content.
     "defaultMode": "system",
     "visitorToggle": false
   },
+  "entity": {
+    "alternateName": "Zaph", "jobTitle": "Cloud Architect", "worksFor": "Example Inc",
+    "alumniOf": ["TU Delft"], "knowsAbout": ["Cloud", "Platform engineering"],
+    "email": "me@example.com", "telephone": "+31 6 1234"
+  },
   "links": [
     {
       "text": "Example", "url": "https://example.com", "newWindow": true,
@@ -210,15 +224,16 @@ idempotent and never overwrites existing content.
 
 Image paths in a seed file refer to files under `DATA_DIR/uploads/`; the JSON and
 the uploads must travel together. `backgroundImageDark` / `backgroundImageLight`,
-`ogImagePath`, `defaultMode`, and `visitorToggle` are optional: older seed files
-without them are filled in with the defaults above.
+`ogImagePath`, `defaultMode`, `visitorToggle`, and the whole `entity` object are
+optional: older seed files without them are filled in with the defaults above
+(`entity` defaults to every field empty).
 
 ## Backup archive format
 
 `GET /admin/backup` returns a gzip-compressed tar (`.tar.gz`) containing:
 
 ```
-seed.json          # the current profile, theme, and links
+seed.json          # the current profile, theme, identity, and links
 uploads/<file>     # every file in DATA_DIR/uploads/
 ```
 

@@ -1,4 +1,11 @@
-import type { BackgroundSettings, NewLink, Profile, SeedFile, ThemeSettings } from './types.ts';
+import type {
+  BackgroundSettings,
+  EntitySettings,
+  NewLink,
+  Profile,
+  SeedFile,
+  ThemeSettings,
+} from './types.ts';
 
 /** Content shown by a freshly seeded, empty installation. */
 export const DEFAULT_PROFILE: Profile = {
@@ -7,6 +14,17 @@ export const DEFAULT_PROFILE: Profile = {
   description:
     'I build small, fast things for the web and write about what I learn along the way. Replace this with your own story in the admin editor.',
   avatarPath: null,
+};
+
+/** No extra identity facts until the owner fills them in. */
+export const DEFAULT_ENTITY: EntitySettings = {
+  alternateName: '',
+  jobTitle: '',
+  worksFor: '',
+  alumniOf: [],
+  knowsAbout: [],
+  email: '',
+  telephone: '',
 };
 
 /** Default background placement: no image, filled and centred. */
@@ -121,5 +139,6 @@ export const DEFAULT_LINKS: NewLink[] = [
 export const DEFAULT_SEED: SeedFile = {
   profile: DEFAULT_PROFILE,
   theme: DEFAULT_THEME,
+  entity: DEFAULT_ENTITY,
   links: DEFAULT_LINKS,
 };

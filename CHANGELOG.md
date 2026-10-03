@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Identity & discoverability fields**: an admin **Identity** section adds optional
+  facts — alternate name, job title, works for, alumni of, knows about, and public
+  email/phone — published as schema.org structured data, a microformats `h-card`,
+  Open Graph `profile` meta, the vCard (`ROLE`/`ORG`/`EMAIL`/`TEL`), `contact.json`,
+  and a `Facts` block in `llms.txt`. The page's JSON-LD is now a `ProfilePage`
+  wrapping a `Person` with a stable `@id` and `givenName`/`familyName`, and the
+  sitemap carries a `lastmod`. The fields are stored in the key/value `settings`
+  table, so no migration is needed, and they round-trip through seed/backup.
 - **QR code share modal**: clicking the avatar opens a modal with a QR code for
   the page URL, the URL shown as text (without its scheme), and a "Get your own
   profile page" link to the project. The QR is generated server-side by a

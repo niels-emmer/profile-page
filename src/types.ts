@@ -8,6 +8,28 @@ export interface Profile {
   avatarPath: string | null;
 }
 
+/**
+ * Extra identity facts that help search engines and AI agents describe the
+ * person unambiguously. All optional; stored in the key/value `settings` table
+ * so no schema migration is needed.
+ */
+export interface EntitySettings {
+  /** Another name the person is known by (nickname, handle). */
+  alternateName: string;
+  /** Job title / role. */
+  jobTitle: string;
+  /** Organisation the person works for. */
+  worksFor: string;
+  /** Organisations the person studied at. */
+  alumniOf: string[];
+  /** Topics the person knows about. */
+  knowsAbout: string[];
+  /** Public contact email, or empty to keep it private. */
+  email: string;
+  /** Public contact telephone, or empty to keep it private. */
+  telephone: string;
+}
+
 export type IconType = 'fa' | 'image';
 export type ColorMode = 'solid' | 'gradient';
 
@@ -81,9 +103,10 @@ export interface ThemeSettings {
   visitorToggle: boolean;
 }
 
-/** A personal seed file: replaces the profile, theme, and all links. */
+/** A personal seed file: replaces the profile, theme, identity, and all links. */
 export interface SeedFile {
   profile: Profile;
   theme: ThemeSettings;
+  entity: EntitySettings;
   links: NewLink[];
 }

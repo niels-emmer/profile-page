@@ -107,6 +107,13 @@ a:hover {
   color: var(--accent);
 }
 
+/* The profile name links to the page itself (microformats `u-url`); keep it
+   looking like the plain heading rather than an accent-coloured link. */
+.p-name a,
+.p-name a:hover {
+  color: inherit;
+}
+
 /* Avatar */
 .rounded-avatar {
   border-radius: 50%;

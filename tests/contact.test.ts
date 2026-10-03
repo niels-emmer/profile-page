@@ -80,6 +80,56 @@ test('renderVCard lists the profile URL before the links', () => {
   assert.match(solo, /\r\nURL:https:\/\/example\.com\/\r\n/);
 });
 
+test('renderVCard includes configured identity facts', () => {
+  const vcf = renderVCard(profile, [link], 'https://example.com', '2026-01-02 03:04:05', {
+    alternateName: 'Zaph',
+    jobTitle: 'Cloud Architect',
+    worksFor: 'Rockstars',
+    alumniOf: [],
+    knowsAbout: [],
+    email: 'me@example.com',
+    telephone: '+31 6 1234',
+  });
+  assert.match(vcf, /\r\nROLE:Cloud Architect\r\n/);
+  assert.match(vcf, /\r\nORG:Rockstars\r\n/);
+  assert.match(vcf, /\r\nEMAIL:me@example\.com\r\n/);
+  assert.match(vcf, /\r\nTEL:\+31 6 1234\r\n/);
+});
+
+test('renderVCard omits invalid contact details', () => {
+  const vcf = renderVCard(profile, [], 'https://example.com', undefined, {
+    alternateName: '',
+    jobTitle: '',
+    worksFor: '',
+    alumniOf: [],
+    knowsAbout: [],
+    email: 'not-an-email',
+    telephone: 'not a phone',
+  });
+  assert.doesNotMatch(vcf, /EMAIL:/);
+  assert.doesNotMatch(vcf, /TEL:/);
+});
+
+test('renderContactJson includes identity facts and sameAs', () => {
+  const data = JSON.parse(
+    renderContactJson(profile, [link], 'https://example.com', {
+      alternateName: 'Zaph',
+      jobTitle: 'Cloud Architect',
+      worksFor: 'Rockstars',
+      alumniOf: ['TU Delft'],
+      knowsAbout: ['Cloud'],
+      email: 'me@example.com',
+      telephone: '',
+    }),
+  ) as Record<string, unknown>;
+  assert.equal(data['jobTitle'], 'Cloud Architect');
+  assert.equal(data['worksFor'], 'Rockstars');
+  assert.deepEqual(data['alumniOf'], ['TU Delft']);
+  assert.deepEqual(data['knowsAbout'], ['Cloud']);
+  assert.equal(data['email'], 'me@example.com');
+  assert.deepEqual(data['sameAs'], ['https://github.com/example']);
+});
+
 test('renderWebFinger returns undefined for a malformed base URL', () => {
   assert.equal(renderWebFinger(profile, [], 'not a url', 'acct:me@example.com'), undefined);
 });

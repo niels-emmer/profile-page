@@ -1,15 +1,18 @@
 import { COLOR_SCHEMES, readableTextColor } from './colors.ts';
+import { DEFAULT_ENTITY } from './defaults.ts';
 import { QR_QUIET_ZONE, qrMatrix, qrPathData } from './qr.ts';
 import type {
   BackgroundPosition,
   BackgroundSettings,
   BackgroundSize,
+  EntitySettings,
   IconType,
   Link,
   Profile,
   ThemeMode,
   ThemeSettings,
 } from './types.ts';
+import { isEmail, isTelephone } from './validate.ts';
 
 const BADGE_SVG =
   '<svg class="badge" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" aria-hidden="true">' +
@@ -88,6 +91,14 @@ export function avatarUrlFor(profile: Profile, baseUrl: string): string {
     : `${baseUrl}/assets/default-avatar.svg`;
 }
 
+/** Best-effort given/family split: the last word is the family name. */
+export function splitPersonName(name: string): { givenName: string; familyName: string } {
+  const trimmed = name.trim();
+  const space = trimmed.lastIndexOf(' ');
+  if (space <= 0) return { givenName: '', familyName: trimmed };
+  return { givenName: trimmed.slice(0, space), familyName: trimmed.slice(space + 1) };
+}
+
 /**
  * An inline-SVG QR code for `url`, or null when the URL is too long to encode.
  * The symbol is drawn black on white so it scans in either theme; the surrounding
@@ -116,6 +127,8 @@ export interface PageContext {
   profile: Profile;
   links: Link[];
   theme: ThemeSettings;
+  /** Extra identity facts; omitted means none. */
+  entity?: EntitySettings;
   baseUrl: string;
 }
 
@@ -161,23 +174,45 @@ function renderThemeSwitcher(): string {
 
 export function renderProfilePage(ctx: PageContext): string {
   const { profile, links, theme, baseUrl } = ctx;
+  const entity = ctx.entity ?? DEFAULT_ENTITY;
   const avatar = profile.avatarPath ?? '/assets/default-avatar.svg';
   const avatarUrl = avatarUrlFor(profile, baseUrl);
   // The social preview card when one has been generated; otherwise the avatar.
   const ogImageUrl = theme.ogImagePath !== null ? `${baseUrl}${theme.ogImagePath}` : avatarUrl;
   const description = `${profile.tagline} ${profile.description}`.trim();
+  const { givenName, familyName } = splitPersonName(profile.name);
 
-  // schema.org Person, for rich results and AI answer engines. `<` is escaped
-  // so a value can never break out of the script element.
+  // schema.org ProfilePage wrapping a Person, for rich results and AI answer
+  // engines. `<` is escaped so a value can never break out of the script element.
   const sameAs = links.map((link) => link.url);
-  const jsonLd = JSON.stringify({
-    '@context': 'https://schema.org',
+  const person: Record<string, unknown> = {
     '@type': 'Person',
+    '@id': `${baseUrl}/#person`,
     name: profile.name,
+    ...(givenName.length > 0 ? { givenName } : {}),
+    ...(familyName.length > 0 ? { familyName } : {}),
+    ...(entity.alternateName.length > 0 ? { alternateName: entity.alternateName } : {}),
     description,
     url: `${baseUrl}/`,
     image: avatarUrl,
+    ...(entity.jobTitle.length > 0 ? { jobTitle: entity.jobTitle } : {}),
+    ...(entity.worksFor.length > 0
+      ? { worksFor: { '@type': 'Organization', name: entity.worksFor } }
+      : {}),
+    ...(entity.alumniOf.length > 0
+      ? { alumniOf: entity.alumniOf.map((name) => ({ '@type': 'Organization', name })) }
+      : {}),
+    ...(entity.knowsAbout.length > 0 ? { knowsAbout: entity.knowsAbout } : {}),
+    ...(isEmail(entity.email) ? { email: entity.email } : {}),
+    ...(isTelephone(entity.telephone) ? { telephone: entity.telephone } : {}),
     ...(sameAs.length > 0 ? { sameAs } : {}),
+  };
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    '@id': `${baseUrl}/#profilepage`,
+    url: `${baseUrl}/`,
+    mainEntity: person,
   }).replaceAll('<', '\\u003c');
 
   const darkVars = `--bg:${backgroundValue(theme.backgroundDark, theme.backgroundImageDark)};--fg:${sanitizeCss(theme.textDark)};`;
@@ -206,8 +241,8 @@ export function renderProfilePage(ctx: PageContext): string {
   const displayUrl = baseUrl.replace(/^https?:\/\//, '');
   const avatarMarkup =
     qrSvg === null
-      ? `<img alt="avatar" id="avatar" class="rounded-avatar fadein" src="${escapeHtml(avatar)}" height="128px" width="128px" style="object-fit: cover;">`
-      : `<a class="avatar-link" href="#qr" data-qr-open aria-haspopup="dialog" aria-label="Show QR code for this page"><img alt="avatar" id="avatar" class="rounded-avatar fadein" src="${escapeHtml(avatar)}" height="128px" width="128px" style="object-fit: cover;"></a>`;
+      ? `<img alt="avatar" id="avatar" class="rounded-avatar fadein u-photo" src="${escapeHtml(avatar)}" height="128px" width="128px" style="object-fit: cover;">`
+      : `<a class="avatar-link" href="#qr" data-qr-open aria-haspopup="dialog" aria-label="Show QR code for this page"><img alt="avatar" id="avatar" class="rounded-avatar fadein u-photo" src="${escapeHtml(avatar)}" height="128px" width="128px" style="object-fit: cover;"></a>`;
   const qrModal =
     qrSvg === null
       ? ''
@@ -231,7 +266,9 @@ export function renderProfilePage(ctx: PageContext): string {
 <meta name="author" content="${escapeHtml(profile.name)}">
 <meta name="robots" content="index,follow">
 <meta property="og:url" content="${escapeHtml(baseUrl)}/">
-<meta property="og:type" content="website">
+<meta property="og:type" content="profile">
+${givenName.length > 0 ? `<meta property="profile:first_name" content="${escapeHtml(givenName)}">` : ''}
+${familyName.length > 0 ? `<meta property="profile:last_name" content="${escapeHtml(familyName)}">` : ''}
 <meta property="og:title" content="${escapeHtml(profile.name)}">
 <meta property="og:description" content="${escapeHtml(description)}">
 <meta property="og:image" content="${escapeHtml(ogImageUrl)}">
@@ -256,10 +293,12 @@ ${qrSvg !== null ? '<script src="/assets/js/qr.js" defer></script>' : ''}
 <body>
 <div class="container">
   <div class="row">
-    <div class="column" style="margin-top: 5%">
+    <div class="column h-card" style="margin-top: 5%">
       ${avatarMarkup}
-      <h1 class="fadein">${escapeHtml(profile.name)}<span title="Verified user">${BADGE_SVG}</span></h1>
-      <center><div class="fadein description-parent"><h3>${escapeHtml(profile.tagline)}</h3><p>${escapeHtml(profile.description)}</p></div></center>
+      <h1 class="fadein p-name"><a class="u-url u-uid" href="${escapeHtml(baseUrl)}/">${escapeHtml(profile.name)}</a><span title="Verified user">${BADGE_SVG}</span></h1>
+      ${entity.jobTitle.length > 0 ? `<data class="p-job-title" value="${escapeHtml(entity.jobTitle)}"></data>` : ''}
+      ${entity.worksFor.length > 0 ? `<data class="p-org" value="${escapeHtml(entity.worksFor)}"></data>` : ''}
+      <center><div class="fadein description-parent"><h3>${escapeHtml(profile.tagline)}</h3><p class="p-note">${escapeHtml(profile.description)}</p></div></center>
 ${buttons}
       <p class="contact-link"><a href="/contact.vcf">Add to contacts</a></p>
     </div>
@@ -285,26 +324,53 @@ export function renderRobotsTxt(baseUrl: string): string {
   );
 }
 
-export function renderSitemap(baseUrl: string): string {
+export function renderSitemap(baseUrl: string, updatedAt?: string): string {
+  const lastmod =
+    updatedAt !== undefined
+      ? `    <lastmod>${escapeHtml(`${updatedAt.replace(' ', 'T')}Z`)}</lastmod>\n`
+      : '';
   return (
     '<?xml version="1.0" encoding="UTF-8"?>\n' +
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
     '  <url>\n' +
     `    <loc>${escapeHtml(baseUrl)}/</loc>\n` +
+    lastmod +
     '  </url>\n' +
     '</urlset>\n'
   );
 }
 
-/** Collapse newlines and strip markdown link syntax from an inline value. */
+/** Collapse newlines and strip markdown structure from an inline value. */
 function markdownInline(value: string): string {
-  return value.replace(/[\r\n]+/g, ' ').replace(/[[\]()]/g, '').trim();
+  return value.replace(/[\r\n]+/g, ' ').replace(/[[\]()<>#`]/g, '').trim();
 }
 
 /** A short plain-text summary following the llms.txt convention. */
-export function renderLlmsTxt(profile: Profile, links: Link[], baseUrl: string): string {
+export function renderLlmsTxt(
+  profile: Profile,
+  links: Link[],
+  baseUrl: string,
+  entity: EntitySettings = DEFAULT_ENTITY,
+): string {
   const summary = markdownInline(`${profile.tagline} ${profile.description}`);
   const description = profile.description.replace(/\r\n?/g, '\n').trim();
+
+  // A compact, factual block agents can lift directly.
+  const facts = [`- Canonical page: ${baseUrl}/`];
+  if (entity.alternateName.length > 0) {
+    facts.push(`- Also known as: ${markdownInline(entity.alternateName)}`);
+  }
+  if (entity.jobTitle.length > 0) facts.push(`- Job title: ${markdownInline(entity.jobTitle)}`);
+  if (entity.worksFor.length > 0) facts.push(`- Works for: ${markdownInline(entity.worksFor)}`);
+  if (entity.alumniOf.length > 0) {
+    facts.push(`- Alumni of: ${entity.alumniOf.map(markdownInline).join(', ')}`);
+  }
+  if (entity.knowsAbout.length > 0) {
+    facts.push(`- Knows about: ${entity.knowsAbout.map(markdownInline).join(', ')}`);
+  }
+  if (isEmail(entity.email)) facts.push(`- Email: ${markdownInline(entity.email)}`);
+  if (isTelephone(entity.telephone)) facts.push(`- Telephone: ${markdownInline(entity.telephone)}`);
+
   const linkLines = links
     .map((link) => `- [${markdownInline(link.text)}](${link.url})`)
     .join('\n');
@@ -312,9 +378,14 @@ export function renderLlmsTxt(profile: Profile, links: Link[], baseUrl: string):
     `# ${markdownInline(profile.name)}\n\n` +
     `> ${summary}\n\n` +
     `${description}\n\n` +
-    `Canonical page: ${baseUrl}/\n\n` +
+    '## Facts\n\n' +
+    `${facts.join('\n')}\n\n` +
     '## Links\n\n' +
-    `${linkLines}\n`
+    `${linkLines}\n\n` +
+    '## Machine-readable\n\n' +
+    `- vCard: ${baseUrl}/contact.vcf\n` +
+    `- JSON: ${baseUrl}/contact.json\n` +
+    `- WebFinger: ${baseUrl}/.well-known/webfinger\n`
   );
 }
 
@@ -394,6 +465,8 @@ export interface AdminContext {
   profile: Profile;
   links: Link[];
   theme: ThemeSettings;
+  /** Extra identity facts; omitted means none. */
+  entity?: EntitySettings;
   csrfToken: string;
   saved: boolean;
   error?: string;
@@ -737,8 +810,35 @@ function securitySection(csrfToken: string, passwordManagedByEnv: boolean): stri
   </section>`;
 }
 
+function identitySection(entity: EntitySettings, csrfToken: string): string {
+  return `<section id="identity" class="admin-card">
+    ${cardHeader('Identity & discoverability', 'Optional facts that help search engines and AI assistants describe you correctly. They are published as structured data (schema.org), in the contact card, and in llms.txt. Leave any field blank to omit it.')}
+    <form method="post" action="/admin/identity" class="admin-form">
+      <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
+      <div class="admin-grid">
+        ${field('Also known as', 'alternateName', entity.alternateName)}
+        ${field('Job title', 'jobTitle', entity.jobTitle)}
+        ${field('Works for', 'worksFor', entity.worksFor)}
+      </div>
+      <label class="admin-field">Alumni of (one per line)
+        <textarea name="alumniOf" rows="2">${escapeHtml(entity.alumniOf.join('\n'))}</textarea>
+      </label>
+      <label class="admin-field">Knows about (one per line)
+        <textarea name="knowsAbout" rows="2">${escapeHtml(entity.knowsAbout.join('\n'))}</textarea>
+      </label>
+      <div class="admin-grid">
+        ${field('Public email', 'email', entity.email, 'email')}
+        ${field('Public phone', 'telephone', entity.telephone, 'tel')}
+      </div>
+      <p class="admin-muted">Email and phone are published publicly (in the vCard and structured data). Leave them blank to keep them private.</p>
+      <div class="admin-actions"><button type="submit" class="admin-button">Save identity</button></div>
+    </form>
+  </section>`;
+}
+
 export function renderAdminPage(ctx: AdminContext): string {
   const { profile, links, theme, csrfToken, saved, error, passwordManagedByEnv } = ctx;
+  const entity = ctx.entity ?? DEFAULT_ENTITY;
   const avatar = profile.avatarPath ?? '/assets/default-avatar.svg';
   const banner = saved ? '<p class="admin-ok">Saved.</p>' : '';
   const errorBanner = error !== undefined ? `<p class="admin-error">${escapeHtml(error)}</p>` : '';
@@ -779,6 +879,7 @@ export function renderAdminPage(ctx: AdminContext): string {
     <aside class="admin-nav">
       <nav class="admin-nav-list">
         <a class="admin-nav-link" href="#profile">Profile</a>
+        <a class="admin-nav-link" href="#identity">Identity</a>
         <a class="admin-nav-link" href="#theme">Theme</a>
         <a class="admin-nav-link" href="#avatar">Avatar</a>
         <a class="admin-nav-link" href="#preview">Preview</a>
@@ -803,6 +904,8 @@ export function renderAdminPage(ctx: AdminContext): string {
       <div class="admin-actions"><button type="submit" class="admin-button">Save profile</button></div>
     </form>
   </section>
+
+  ${identitySection(entity, csrfToken)}
 
   ${themeSection(theme, csrfToken)}
 

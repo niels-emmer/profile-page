@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { loadConfig } from '../src/config.ts';
-import { getProfile, getTheme, listLinks, openDatabase } from '../src/db.ts';
+import { getEntity, getProfile, getTheme, listLinks, openDatabase } from '../src/db.ts';
 import { applySeed, parseSeed, validateSeed } from '../src/seed-file.ts';
 import type { SeedFile } from '../src/types.ts';
 
@@ -43,6 +43,15 @@ const seed: SeedFile = {
     },
     defaultMode: 'dark',
     visitorToggle: true,
+  },
+  entity: {
+    alternateName: 'Seed Alias',
+    jobTitle: 'Seed Job',
+    worksFor: 'Seed Org',
+    alumniOf: ['Seed University'],
+    knowsAbout: ['Seeding'],
+    email: 'seed@example.com',
+    telephone: '+31 6 12345678',
   },
   links: [
     {
@@ -150,6 +159,14 @@ test('applySeed replaces the profile, theme, and links', () => {
     assert.equal(links[0]?.text, 'One');
     assert.equal(links[1]?.borderColor, '#ffffff');
 
+    const entity = getEntity(db);
+    assert.equal(entity.jobTitle, 'Seed Job');
+    assert.equal(entity.worksFor, 'Seed Org');
+    assert.deepEqual(entity.alumniOf, ['Seed University']);
+    assert.deepEqual(entity.knowsAbout, ['Seeding']);
+    assert.equal(entity.email, 'seed@example.com');
+    assert.equal(entity.telephone, '+31 6 12345678');
+
     // Re-applying replaces rather than appends.
     applySeed(db, { ...seed, links: [seed.links[0]!] });
     assert.equal(listLinks(db).length, 1);
@@ -157,4 +174,37 @@ test('applySeed replaces the profile, theme, and links', () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('parseSeed fills empty identity fields from an older backup', () => {
+  const parsed = parseSeed({ profile: seed.profile, theme: seed.theme, links: [] });
+  assert.deepEqual(parsed.entity, {
+    alternateName: '',
+    jobTitle: '',
+    worksFor: '',
+    alumniOf: [],
+    knowsAbout: [],
+    email: '',
+    telephone: '',
+  });
+});
+
+test('parseSeed strips control characters from identity fields', () => {
+  const parsed = parseSeed({
+    profile: seed.profile,
+    theme: seed.theme,
+    links: [],
+    entity: { jobTitle: 'Cloud\nArchitect', worksFor: 'Acme\r\nInc', email: '', telephone: '' },
+  });
+  assert.equal(parsed.entity.jobTitle, 'Cloud Architect');
+  assert.equal(parsed.entity.worksFor, 'Acme Inc');
+});
+
+test('validateSeed rejects an invalid contact email or phone', () => {
+  assert.throws(() =>
+    validateSeed({ ...seed, entity: { ...seed.entity, email: 'not-an-email' } }),
+  );
+  assert.throws(() =>
+    validateSeed({ ...seed, entity: { ...seed.entity, telephone: 'call me maybe' } }),
+  );
 });
