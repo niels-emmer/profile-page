@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import { basename, join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { gunzipSync, gzipSync } from 'node:zlib';
-import { getProfile, getTheme, listLinks } from './db.ts';
+import { getEntity, getProfile, getTheme, listLinks } from './db.ts';
 import { applySeed, parseSeed, validateSeed } from './seed-file.ts';
 import { createTar, readTar, type TarEntry } from './tar.ts';
 import type { Link, NewLink, SeedFile } from './types.ts';
@@ -36,6 +36,7 @@ export function buildBackup(db: DatabaseSync, uploadsDir: string): Buffer {
   const seed: SeedFile = {
     profile: getProfile(db),
     theme: getTheme(db),
+    entity: getEntity(db),
     links: listLinks(db).map(toNewLink),
   };
 

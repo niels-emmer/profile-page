@@ -37,6 +37,11 @@ the same idea, a fraction of the footprint, and your data stays on your own disk
 - **QR code share** — click your avatar to open a modal with a QR code for your
   page URL, the URL as text, and a link to make your own page. Works without
   JavaScript.
+- **Discoverable identity** — optional job title, employer, alumni, expertise, and
+  public contact details are published as schema.org structured data, microformats,
+  Open Graph profile meta, and `llms.txt`, so search engines and AI assistants
+  describe you accurately. Everything is editable from the admin **Identity**
+  section.
 - **Link icons** — Font Awesome classes (with a lookup link) or uploaded images;
   the editor shows only the fields for the chosen icon type, and an **Upload
   icon** button resizes and converts your graphic in the browser.

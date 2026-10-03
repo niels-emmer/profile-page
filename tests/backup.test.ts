@@ -7,7 +7,7 @@ import { gunzipSync, gzipSync } from 'node:zlib';
 import { BackupError, buildBackup, restoreBackup } from '../src/backup.ts';
 import { loadConfig, type Config } from '../src/config.ts';
 import { createLink, getProfile, getTheme, listLinks, openDatabase, saveProfile, saveTheme } from '../src/db.ts';
-import { DEFAULT_THEME } from '../src/defaults.ts';
+import { DEFAULT_ENTITY, DEFAULT_THEME } from '../src/defaults.ts';
 import { createTar, readTar } from '../src/tar.ts';
 import type { DatabaseSync } from 'node:sqlite';
 import type { NewLink, SeedFile } from '../src/types.ts';
@@ -34,6 +34,7 @@ const LINK: NewLink = {
 const SEED: SeedFile = {
   profile: { name: 'Restored', tagline: 'T', description: 'D', avatarPath: '/assets/uploads/avatar.png' },
   theme: { ...DEFAULT_THEME, accentColor: '#123456' },
+  entity: { ...DEFAULT_ENTITY, jobTitle: 'Restored title' },
   links: [LINK],
 };
 

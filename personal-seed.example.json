@@ -30,6 +30,15 @@
     "defaultMode": "system",
     "visitorToggle": false
   },
+  "entity": {
+    "alternateName": "",
+    "jobTitle": "",
+    "worksFor": "",
+    "alumniOf": [],
+    "knowsAbout": [],
+    "email": "",
+    "telephone": ""
+  },
   "links": [
     {
       "text": "Example",

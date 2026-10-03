@@ -197,3 +197,29 @@ matrices plus a checksum sweep covering versions 1–40, all matching exactly �
 including the automatic mask choice, which follows the standard penalty rules. A
 new client file and a new source file are added to the source map in
 [architecture.md](architecture.md).
+
+---
+
+## ADR-014: Identity facts live in `settings`, published as structured data
+
+**Context.** Search engines and AI agents describe a person best when the page
+states the entity unambiguously (name parts, role, employer, expertise, links).
+Those facts are optional and owner-specific, so they must be editable, not
+hard-coded.
+
+**Decision.** Add an optional **Identity** set (alternate name, job title, works
+for, alumni of, knows about, public email/phone) stored under `entity.*` keys in
+the existing key/value `settings` table — no schema migration (the same reason as
+ADR-003). `render.ts` publishes them as a schema.org `ProfilePage` wrapping a
+`Person` (with a stable `@id`), a microformats `h-card`, and Open Graph `profile`
+meta; `contact.ts` adds them to the vCard (`ROLE`/`ORG`/`EMAIL`/`TEL`) and
+`contact.json` (`sameAs` + facts); `llms.txt` gains a `Facts` block and the
+sitemap a `lastmod`. The seed/backup format gains an `entity` object (normalised
+to empty for older backups).
+
+**Consequences.** Adding another identity field needs no migration — a key, a
+form field, and a place in the structured output. Values are escaped like every
+other output; the public email/phone are opt-in and clearly labelled as public.
+On-page markup alone does not create authority — external corroboration
+(reciprocal `rel="me"`/backlinks from authoritative profiles) still does — but the
+page now presents a machine-unambiguous anchor.

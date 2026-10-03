@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { gunzipSync, gzipSync } from 'node:zlib';
-import { deleteLink, ensureSeeded, getAuth, getProfile, getTheme, listLinks } from '../src/db.ts';
+import { deleteLink, ensureSeeded, getAuth, getEntity, getProfile, getTheme, listLinks } from '../src/db.ts';
 import { ensureAuth, isDefaultPassword, verifyPassword } from '../src/auth.ts';
 import { createTar, readTar } from '../src/tar.ts';
 import { MAX_UPLOAD_BYTES } from '../src/upload.ts';
@@ -225,6 +225,55 @@ test('admin can edit the profile and it appears on the public page', async (t) =
   const html = await (await ctx.app.request('/')).text();
   assert.match(html, /Route Test/);
   assert.match(html, /Tagline/);
+});
+
+test('admin can set identity facts that appear in the structured data', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS };
+
+  const res = await ctx.app.request('/admin/identity', {
+    method: 'POST',
+    headers,
+    body: formBody({
+      csrf,
+      alternateName: 'Zaph',
+      jobTitle: 'Cloud Architect',
+      worksFor: 'Rockstars',
+      alumniOf: 'TU Delft\nUniversity of Amsterdam',
+      knowsAbout: 'Cloud\nPlatform engineering',
+      email: 'me@example.com',
+      telephone: '+31 6 1234',
+    }),
+  });
+  assert.equal(res.status, 302);
+
+  const entity = getEntity(ctx.db);
+  assert.equal(entity.jobTitle, 'Cloud Architect');
+  assert.deepEqual(entity.alumniOf, ['TU Delft', 'University of Amsterdam']);
+  assert.deepEqual(entity.knowsAbout, ['Cloud', 'Platform engineering']);
+
+  const html = await (await ctx.app.request('/')).text();
+  const json = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)?.[1] ?? '';
+  const person = (JSON.parse(json) as { mainEntity: { jobTitle: string } }).mainEntity;
+  assert.equal(person.jobTitle, 'Cloud Architect');
+});
+
+test('the identity form rejects an invalid contact email', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS };
+
+  const res = await ctx.app.request('/admin/identity', {
+    method: 'POST',
+    headers,
+    body: formBody({ csrf, email: 'not-an-email' }),
+  });
+  assert.equal(res.status, 302);
+  assert.match(res.headers.get('location') ?? '', /error=/);
+  assert.equal(getEntity(ctx.db).email, '');
 });
 
 test('admin can set the default theme and enable the visitor switcher', async (t) => {

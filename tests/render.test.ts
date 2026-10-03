@@ -220,7 +220,7 @@ test('renderProfilePage emits the favicon MIME, apple-touch-icon, and background
   assert.match(html, /--bg:url\(\/assets\/uploads\/dark\.webp\) center\/cover no-repeat scroll, #000000/);
 });
 
-test('renderProfilePage emits canonical, theme-color, and Person JSON-LD', () => {
+test('renderProfilePage emits canonical, theme-color, and ProfilePage JSON-LD', () => {
   const html = renderProfilePage({ profile, links: [link], theme, baseUrl: 'https://example.com' });
   assert.match(html, /<link rel="canonical" href="https:\/\/example\.com\/">/);
   assert.match(html, /<meta name="theme-color" content="#0085ff">/);
@@ -230,11 +230,80 @@ test('renderProfilePage emits canonical, theme-color, and Person JSON-LD', () =>
   assert.match(html, /<p class="contact-link"><a href="\/contact\.vcf">Add to contacts<\/a><\/p>/);
   assert.match(html, /<script type="application\/ld\+json">/);
   const json = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)?.[1] ?? '';
-  const data = JSON.parse(json) as { '@type': string; name: string; url: string; sameAs: string[] };
-  assert.equal(data['@type'], 'Person');
-  assert.equal(data.name, 'Test <User>');
+  const data = JSON.parse(json) as {
+    '@type': string;
+    url: string;
+    mainEntity: {
+      '@type': string;
+      '@id': string;
+      name: string;
+      givenName: string;
+      familyName: string;
+      url: string;
+      sameAs: string[];
+    };
+  };
+  assert.equal(data['@type'], 'ProfilePage');
   assert.equal(data.url, 'https://example.com/');
-  assert.deepEqual(data.sameAs, ['https://github.com/example']);
+  assert.equal(data.mainEntity['@type'], 'Person');
+  assert.equal(data.mainEntity['@id'], 'https://example.com/#person');
+  assert.equal(data.mainEntity.name, 'Test <User>');
+  assert.equal(data.mainEntity.givenName, 'Test');
+  assert.equal(data.mainEntity.familyName, '<User>');
+  assert.equal(data.mainEntity.url, 'https://example.com/');
+  assert.deepEqual(data.mainEntity.sameAs, ['https://github.com/example']);
+});
+
+test('renderProfilePage publishes identity facts as structured data, h-card, and og:profile', () => {
+  const html = renderProfilePage({
+    profile,
+    links: [link],
+    theme,
+    entity: {
+      alternateName: 'Zaph',
+      jobTitle: 'Cloud Architect',
+      worksFor: 'Rockstars',
+      alumniOf: ['TU Delft'],
+      knowsAbout: ['Cloud', 'Platform engineering'],
+      email: 'me@example.com',
+      telephone: '+31 6 1234',
+    },
+    baseUrl: 'https://example.com',
+  });
+
+  const json = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)?.[1] ?? '';
+  const person = (JSON.parse(json) as { mainEntity: Record<string, unknown> }).mainEntity;
+  assert.equal(person['alternateName'], 'Zaph');
+  assert.equal(person['jobTitle'], 'Cloud Architect');
+  assert.deepEqual(person['worksFor'], { '@type': 'Organization', name: 'Rockstars' });
+  assert.deepEqual(person['alumniOf'], [{ '@type': 'Organization', name: 'TU Delft' }]);
+  assert.deepEqual(person['knowsAbout'], ['Cloud', 'Platform engineering']);
+  assert.equal(person['email'], 'me@example.com');
+  assert.equal(person['telephone'], '+31 6 1234');
+
+  // Microformats2 h-card for IndieWeb/agent parsers.
+  assert.match(html, /class="column h-card"/);
+  assert.match(html, /class="fadein p-name"/);
+  assert.match(html, /class="u-url u-uid" href="https:\/\/example\.com\/"/);
+  assert.match(html, /class="rounded-avatar fadein u-photo"/);
+  assert.match(html, /class="p-note"/);
+  assert.match(html, /class="p-job-title" value="Cloud Architect"/);
+  assert.match(html, /class="p-org" value="Rockstars"/);
+
+  // Open Graph profile extension.
+  assert.match(html, /<meta property="og:type" content="profile">/);
+  assert.match(html, /<meta property="profile:first_name" content="Test">/);
+  assert.match(html, /<meta property="profile:last_name" content="&lt;User&gt;">/);
+});
+
+test('renderProfilePage omits identity facts when none are configured', () => {
+  const html = renderProfilePage({ profile, links: [], theme, baseUrl: 'https://example.com' });
+  assert.doesNotMatch(html, /p-job-title/);
+  assert.doesNotMatch(html, /"jobTitle"/);
+  assert.doesNotMatch(html, /"worksFor"/);
+  assert.doesNotMatch(html, /"knowsAbout"/);
+  // givenName/familyName still come from the name itself.
+  assert.match(html, /"givenName":"Test"/);
 });
 
 test('JSON-LD cannot break out of the script element', () => {
@@ -262,9 +331,18 @@ test('renderSitemap lists the canonical URL', () => {
   assert.match(xml, /<loc>https:\/\/example\.com\/<\/loc>/);
 });
 
+test('renderSitemap includes a lastmod when the profile has been updated', () => {
+  assert.match(
+    renderSitemap('https://example.com', '2026-01-02 03:04:05'),
+    /<lastmod>2026-01-02T03:04:05Z<\/lastmod>/,
+  );
+  assert.doesNotMatch(renderSitemap('https://example.com'), /<lastmod>/);
+});
+
 test('renderLlmsTxt summarises the profile and links', () => {
   const txt = renderLlmsTxt(profile, [link], 'https://example.com');
-  assert.match(txt, /^# Test <User>/);
+  // Plain-text output: markdown structure (including angle brackets) is stripped.
+  assert.match(txt, /^# Test User/);
   assert.match(txt, /- \[GitHub\]\(https:\/\/github\.com\/example\)/);
   assert.match(txt, /Canonical page: https:\/\/example\.com\//);
 });
@@ -277,6 +355,25 @@ test('renderLlmsTxt escapes markdown-breaking characters', () => {
   );
   assert.match(txt, /^# A B/);
   assert.match(txt, /- \[Badx link\]\(https:\/\/github\.com\/example\)/);
+});
+
+test('renderLlmsTxt publishes identity facts and machine endpoints', () => {
+  const txt = renderLlmsTxt(profile, [link], 'https://example.com', {
+    alternateName: 'Zaph',
+    jobTitle: 'Cloud Architect',
+    worksFor: 'Rockstars',
+    alumniOf: ['TU Delft'],
+    knowsAbout: ['Cloud'],
+    email: 'me@example.com',
+    telephone: '',
+  });
+  assert.match(txt, /## Facts/);
+  assert.match(txt, /- Job title: Cloud Architect/);
+  assert.match(txt, /- Works for: Rockstars/);
+  assert.match(txt, /- Alumni of: TU Delft/);
+  assert.match(txt, /- Knows about: Cloud/);
+  assert.match(txt, /## Machine-readable/);
+  assert.match(txt, /- vCard: https:\/\/example\.com\/contact\.vcf/);
 });
 
 test('renderLoginPage includes the CSRF token and error message', () => {
@@ -319,6 +416,33 @@ test('renderAdminPage includes every form and the saved banner', () => {
   assert.match(html, /fontawesome\.com\/search/);
   assert.match(html, /Saved\./);
   assert.match(html, /GitHub/);
+});
+
+test('renderAdminPage includes the identity section', () => {
+  const html = renderAdminPage({
+    profile,
+    links: [link],
+    theme,
+    entity: {
+      alternateName: 'Zaph',
+      jobTitle: 'Cloud Architect',
+      worksFor: 'Rockstars',
+      alumniOf: ['TU Delft'],
+      knowsAbout: ['Cloud'],
+      email: 'me@example.com',
+      telephone: '',
+    },
+    csrfToken: 'token-123',
+    saved: false,
+    passwordManagedByEnv: false,
+  });
+  assert.match(html, /<a class="admin-nav-link" href="#identity">Identity<\/a>/);
+  assert.match(html, /action="\/admin\/identity"/);
+  assert.match(html, /name="jobTitle"/);
+  assert.match(html, /name="alumniOf"/);
+  assert.match(html, /name="knowsAbout"/);
+  assert.match(html, /name="telephone"/);
+  assert.match(html, /value="Cloud Architect"/);
 });
 
 test('renderAdminPage includes the favicon, background, and drag-reorder controls', () => {
@@ -378,5 +502,5 @@ test('renderProfilePage omits the QR feature when the URL cannot be encoded', ()
   });
   assert.doesNotMatch(html, /qr-modal/);
   assert.doesNotMatch(html, /data-qr-open/);
-  assert.match(html, /<img alt="avatar" id="avatar" class="rounded-avatar fadein"/);
+  assert.match(html, /<img alt="avatar" id="avatar" class="rounded-avatar fadein u-photo"/);
 });

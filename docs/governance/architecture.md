@@ -99,6 +99,12 @@ Four tables (`src/db.ts`):
 settings need no migration (see
 [invariants.md](invariants.md#9-theme-settings-use-the-keyvalue-table--no-migration)).
 
+**Identity state uses the same bag** under `entity.*` keys (`entity.jobTitle`,
+`entity.worksFor`, `entity.alumniOf`, `entity.knowsAbout`, `entity.email`, …).
+These are the optional facts the admin **Identity** section publishes as
+structured data; storing them in `settings` means adding a field needs no
+migration either.
+
 **Seeding.** `ensureSeeded` applies `DEFAULT_SEED` (the "Alex Rivera" demo) only
 when no profile row exists. It is idempotent — later edits, including deleting
 every link, survive restarts.
