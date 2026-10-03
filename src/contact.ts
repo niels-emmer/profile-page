@@ -92,6 +92,8 @@ export function renderVCard(
     ...(profile.tagline.length > 0 ? [`TITLE:${escapeVCard(profile.tagline)}`] : []),
     ...(profile.description.length > 0 ? [`NOTE:${escapeVCard(profile.description)}`] : []),
     `PHOTO;MEDIATYPE=${imageMime(profile.avatarPath ?? 'default-avatar.svg')}:${sanitizeUri(avatarUrl)}`,
+    // The profile page itself is listed first, before the profile's links.
+    `URL:${sanitizeUri(`${baseUrl}/`)}`,
     ...links.map((link) => `URL:${sanitizeUri(link.url)}`),
     `UID:${baseUrl}/`,
     `REV:${toIsoTimestamp(updatedAt)}`,

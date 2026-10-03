@@ -47,11 +47,12 @@ valid CSRF token receive `403`. Invalid input redirects back to `/admin?error=..
 All are derived from the profile at request time — no personal data is stored in
 the repository.
 
-- **`/contact.vcf`** — a vCard 4.0 (`FN`, `N`, `TITLE`, `NOTE`, `PHOTO`, one `URL`
-  per link, `UID`, `REV`). Values are escaped, control characters stripped from
-  URLs, and lines folded per RFC 6350. `REV` is the profile's `updated_at`, so the
-  document is stable between edits. The homepage links it with
-  `<link rel="alternate" type="text/vcard">` and a visible "Add to contacts" link.
+- **`/contact.vcf`** — a vCard 4.0 (`FN`, `N`, `TITLE`, `NOTE`, `PHOTO`, the
+  profile URL followed by one `URL` per link, `UID`, `REV`). Values are escaped,
+  control characters stripped from URLs, and lines folded per RFC 6350. `REV` is
+  the profile's `updated_at`, so the document is stable between edits. The
+  homepage links it with `<link rel="alternate" type="text/vcard">` and a visible
+  "Add to contacts" link.
 - **`/contact.json`** — `{ name, tagline, description, url, avatar, vcard, links[] }`.
 - **`/.well-known/webfinger`** — answers `resource=acct:me@<host>`,
   `acct:<name-slug>@<host>`, or the base URL; anything else is `404`, and a
