@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { deleteLink, ensureSeeded, getAuth, getEntity, getProfile, getTheme, listLinks } from '../src/db.ts';
@@ -65,6 +67,35 @@ test('crawler files are served with the right content types', async (t) => {
   assert.equal(llms.status, 200);
   assert.match(llms.headers.get('content-type') ?? '', /text\/plain/);
   assert.match(await llms.text(), /^# Alex Rivera/);
+});
+
+test('owner root files (site verification) are served from DATA_DIR/root', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+
+  const dir = join(ctx.config.dataDir, 'root');
+  mkdirSync(dir, { recursive: true });
+  const body = 'google-site-verification: googledbb15ec766251fa6.html\n';
+  writeFileSync(join(dir, 'googledbb15ec766251fa6.html'), body);
+  writeFileSync(join(dir, 'BingSiteAuth.xml'), '<users/>');
+
+  const html = await ctx.app.request('/googledbb15ec766251fa6.html');
+  assert.equal(html.status, 200);
+  assert.match(html.headers.get('content-type') ?? '', /text\/html/);
+  assert.equal(await html.text(), body);
+
+  const xml = await ctx.app.request('/BingSiteAuth.xml');
+  assert.equal(xml.status, 200);
+  assert.match(xml.headers.get('content-type') ?? '', /application\/xml/);
+});
+
+test('root file serving rejects missing files, unknown types, and traversal', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+
+  assert.equal((await ctx.app.request('/missing.html')).status, 404);
+  assert.equal((await ctx.app.request('/package.json')).status, 404);
+  assert.equal((await ctx.app.request('/..%2f..%2fpackage.json')).status, 404);
 });
 
 test('contact endpoints serve a vCard, JSON, and WebFinger', async (t) => {

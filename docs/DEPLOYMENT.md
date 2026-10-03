@@ -84,6 +84,7 @@ Everything stateful lives in `DATA_DIR`:
 data/
   profile.db        # SQLite database (profile, links, theme, auth)
   uploads/          # avatar, background, and link icons
+  root/             # site-verification files served at the site root (e.g. Google)
 ```
 
 Back up the whole directory. To move an installation, copy `data/` to the new

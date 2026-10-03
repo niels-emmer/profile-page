@@ -57,6 +57,10 @@ the repository.
   visible "Add to contacts" link.
 - **`/contact.json`** — `{ name, tagline, description, url, avatar, vcard,
   sameAs[], links[], …identity }`.
+- **Site-verification files** — a `.html`, `.htm`, `.xml`, or `.txt` file placed
+  in `DATA_DIR/root/` is served at the site root (e.g. `/google….html`), for
+  Google/Bing/Yandex ownership checks. The directory sits under the gitignored
+  `DATA_DIR`, so the tokens are never committed. Any other root path is `404`.
 - **Profile-page structured data** — a schema.org `ProfilePage` wrapping a
   `Person` (`@id`, `givenName`/`familyName`, and any configured `jobTitle`,
   `worksFor`, `alumniOf`, `knowsAbout`, `email`, `telephone`, `alternateName`,

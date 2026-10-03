@@ -1,6 +1,8 @@
 import { getConnInfo } from '@hono/node-server/conninfo';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { randomBytes } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { getCookie, setCookie } from 'hono/cookie';
@@ -90,6 +92,19 @@ const CSP = [
 
 /** A plausible hostname (optionally with a port); used to vet forwarded hosts. */
 const HOST_PATTERN = /^[a-z0-9.-]+(:\d+)?$/i;
+
+/**
+ * A safe root-level file the owner may drop in `DATA_DIR/root/` (e.g. a Google
+ * site-verification HTML file). No slashes or leading dots, so it cannot escape
+ * the directory; only text-ish verification file types are served.
+ */
+const ROOT_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]*\.(?:html|htm|xml|txt)$/;
+
+function rootFileMime(name: string): string {
+  if (name.endsWith('.xml')) return 'application/xml; charset=utf-8';
+  if (name.endsWith('.txt')) return 'text/plain; charset=utf-8';
+  return 'text/html; charset=utf-8';
+}
 
 const LOGIN_BODY_LIMIT = 16 * 1024;
 const TEXT_BODY_LIMIT = 64 * 1024;
@@ -753,6 +768,23 @@ export function createApp(deps: AppDeps): Hono {
       return c.redirect('/admin?ok=1');
     },
   );
+
+  /* ------------------------- site verification --------------------------- */
+
+  // Owner-provided root files (Google/Bing/Yandex site verification, etc.) live
+  // in DATA_DIR/root and are served at the site root. DATA_DIR is gitignored, so
+  // the tokens are never committed; only safe text-ish filenames are served.
+  // Registered last so it never shadows a real route (e.g. /admin, /login).
+  app.get('/:file', async (c) => {
+    const file = c.req.param('file');
+    if (!ROOT_FILE.test(file)) return c.notFound();
+    try {
+      const contents = await readFile(join(config.dataDir, 'root', file));
+      return c.body(contents, 200, { 'Content-Type': rootFileMime(file) });
+    } catch {
+      return c.notFound();
+    }
+  });
 
   /* -------------------------------- assets ------------------------------- */
 

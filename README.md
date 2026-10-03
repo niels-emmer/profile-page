@@ -62,8 +62,9 @@ footprint, and your data stays on your own disk.
   from the Security section (signs out other sessions), or reset a forgotten one
   with a single `docker exec` command.
 - **Crawler- and agent-friendly** — `robots.txt`, `sitemap.xml` (with `lastmod`),
-  `llms.txt` (with an identity `Facts` block), a canonical link, `theme-color`, and
-  schema.org `ProfilePage`/`Person` JSON-LD.
+  `llms.txt` (with an identity `Facts` block), a canonical link, `theme-color`,
+  schema.org `ProfilePage`/`Person` JSON-LD, and site-verification files served
+  from `data/root/`.
 - **Contact exchange** — a one-click vCard (`/contact.vcf`), a JSON summary
   (`/contact.json`), and a WebFinger probe (`/.well-known/webfinger`).
 - **Tiny and dependency-light** — two runtime dependencies, no build step,
