@@ -174,3 +174,26 @@ no LinkStack code; the verified-badge SVG is the one permitted asset (MIT).
 **Consequences.** Clear licensing and a stylesheet we fully understand. Fidelity
 is verified against the source page (see [PLAN.md](../PLAN.md)); small intentional
 deltas are documented there.
+
+---
+
+## ADR-013: QR code from a hand-written encoder; the modal is CSS-only
+
+**Context.** The public page offers a QR code for its own URL, opened by clicking
+the avatar. Encoding a QR code needs GF(256) Reed-Solomon error correction,
+symbol placement, and mask selection — normally a library. The project allows
+exactly two runtime dependencies and prefers hand-written, understood code.
+
+**Decision.** Implement the QR Code model-2 encoder in `src/qr.ts` (byte mode,
+error-correction level M, versions 1–40) instead of adding a dependency — the
+same call as the hand-written `src/tar.ts` (ADR-008). It returns a module matrix;
+`render.ts` draws it as inline SVG, black on white so it scans in either theme.
+The modal is pure CSS (`:target`), so it works with JavaScript disabled; a small
+`public/js/qr.js` adds focus handling and Escape as progressive enhancement.
+
+**Consequences.** No third-party code, so invariants 1 and 15 hold. The encoder
+is unit-tested against Project Nayuki's reference (MIT): three full module
+matrices plus a checksum sweep covering versions 1–40, all matching exactly —
+including the automatic mask choice, which follows the standard penalty rules. A
+new client file and a new source file are added to the source map in
+[architecture.md](architecture.md).

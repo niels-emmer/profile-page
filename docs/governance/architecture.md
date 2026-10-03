@@ -42,6 +42,7 @@ src/
   validate.ts   shared input validation (URLs, asset refs, enums, hex colours, opacity)
   render.ts     renderProfilePage, renderLoginPage, renderSetPasswordPage, renderAdminPage, discovery files,
                 escapeHtml, sanitizeCss, backgroundValue (per-theme layered background)
+  qr.ts         dependency-free QR Code encoder (byte mode, level M) → module matrix + SVG path
   colors.ts     COLOR_SCHEMES presets, readableTextColor, shade, generateGradient
   upload.ts     detectImageType (magic bytes), saveImage, deleteUpload, isSvg, sanitizeSvg
   tar.ts        dependency-free ustar reader/writer
@@ -56,6 +57,7 @@ public/
   js/admin.js        progressive enhancement (presets, confirm, avatar preview, sliders, drag reorder,
                      icon-type toggle, icon upload, OG-card generation)
   js/theme.js        visitor theme switcher (loaded synchronously in <head> when enabled)
+  js/qr.js           QR modal enhancement (focus handling and Escape)
   icons/*.svg        bundled Simple Icons (white fill)
   fonts/             Inter + Font Awesome woff2
   default-avatar.svg, favicon.png
@@ -109,8 +111,9 @@ passes through `escapeHtml`; every CSS value through `sanitizeCss`.
 
 - **`renderProfilePage`** — the public page: profile, links, discovery meta
   (`canonical`, `theme-color`, schema.org `Person` JSON-LD, `rel="me"`,
-  `rel="alternate"`), a per-request `<style>` block for the theme, and the
-  visitor switcher when enabled.
+  `rel="alternate"`), a per-request `<style>` block for the theme, the
+  avatar-triggered QR modal (an inline SVG built by `qr.ts`), and the visitor
+  switcher when enabled.
 - **`renderLoginPage`** — the password form (sets the CSRF cookie).
 - **`renderAdminPage`** — the editor: nav, profile, theme, avatar, preview,
   favicon, background, links, backup/restore, security.

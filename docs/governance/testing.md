@@ -26,6 +26,7 @@ One file per area:
 | `tar.test.ts` | ustar round-trip, traversal rejection |
 | `backup.test.ts` | backup/restore round-trips and rejection paths |
 | `contact.test.ts` | vCard, contact JSON, WebFinger |
+| `qr.test.ts` | QR encoder: reference matrices and a version 1–40 sweep |
 | `helpers.ts` | shared harness (not a test file) |
 
 ## Helpers (`tests/helpers.ts`)

@@ -34,6 +34,9 @@ the same idea, a fraction of the footprint, and your data stays on your own disk
 - **Social preview image** — generate a 1200×630 card (avatar, name, tagline on
   the accent colour) in the browser; it's served as `og:image`/`twitter:image`
   so your page looks right when shared on Discord, Slack, or Twitter.
+- **QR code share** — click your avatar to open a modal with a QR code for your
+  page URL, the URL as text, and a link to make your own page. Works without
+  JavaScript.
 - **Link icons** — Font Awesome classes (with a lookup link) or uploaded images;
   the editor shows only the fields for the chosen icon type, and an **Upload
   icon** button resizes and converts your graphic in the browser.
