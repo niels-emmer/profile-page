@@ -3,11 +3,17 @@
 [![CI](https://github.com/niels-emmer/profile-page/actions/workflows/ci.yml/badge.svg)](https://github.com/niels-emmer/profile-page/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**A link-in-bio page that's yours — not a SaaS account.** One small container, one
-SQLite file, two runtime dependencies, and no build step. Self-host it behind your
-reverse proxy, point your domain at it, and edit everything from a built-in admin
-panel. It's a drop-in replacement for LinkStack and hosted link-in-bio services:
-the same idea, a fraction of the footprint, and your data stays on your own disk.
+**A link-in-bio page that's yours — not a SaaS account.** One link that says
+everything about you — your name, your work, and every place to find you — on a
+fast, fully responsive page that looks right on any screen. And it's built for
+more than human eyes: the same page hands clean, structured information to search
+engines, link previews, and AI assistants, so you're represented correctly whether
+someone *reads* it, *crawls* it, or *asks* about you. Humans, bots, and agents —
+all covered. One small container, one SQLite file, two runtime dependencies, and
+no build step. Self-host it behind your reverse proxy, point your domain at it,
+and edit everything from a built-in admin panel. It's a drop-in replacement for
+LinkStack and hosted link-in-bio services: the same idea, a fraction of the
+footprint, and your data stays on your own disk.
 
 <p align="center">
   <img src="docs/screenshot-dark.png" alt="Profile page, dark theme" width="380">
