@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Site-verification files**: drop a Google/Bing/Yandex ownership file into
+  `DATA_DIR/root/` and it is served at the site root (e.g.
+  `/googledbb15ec766251fa6.html`). The directory is under the gitignored
+  `DATA_DIR`, so the tokens stay out of the repository.
 - **Identity & discoverability fields**: an admin **Identity** section adds optional
   facts — alternate name, job title, works for, alumni of, knows about, and public
   email/phone — published as schema.org structured data, a microformats `h-card`,
