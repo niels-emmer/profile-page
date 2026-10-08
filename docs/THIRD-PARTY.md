@@ -7,8 +7,8 @@ following third-party components.
 
 | Package | Version | License |
 |---|---|---|
-| [hono](https://github.com/honojs/hono) | 4.13.10 | MIT |
-| [@hono/node-server](https://github.com/honojs/node-server) | 2.1.2 | MIT |
+| [hono](https://github.com/honojs/hono) | 4.13.12 | MIT |
+| [@hono/node-server](https://github.com/honojs/node-server) | 2.1.3 | MIT |
 
 ## Bundled assets
 
