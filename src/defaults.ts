@@ -58,6 +58,7 @@ export const DEFAULT_LINKS: NewLink[] = [
   {
     text: 'Website',
     url: 'https://example.com',
+    description: '**Personal site** — writing, projects, and notes.\n\n- Design\n- Code',
     newWindow: true,
     iconType: 'fa',
     iconValue: 'fa-solid fa-globe',
@@ -71,6 +72,7 @@ export const DEFAULT_LINKS: NewLink[] = [
   {
     text: 'GitHub',
     url: 'https://github.com/example',
+    description: 'Open-source projects and experiments.',
     newWindow: true,
     iconType: 'image',
     iconValue: '/assets/icons/github.svg',
@@ -84,6 +86,7 @@ export const DEFAULT_LINKS: NewLink[] = [
   {
     text: 'LinkedIn',
     url: 'https://www.linkedin.com/in/example',
+    description: '',
     newWindow: true,
     iconType: 'image',
     iconValue: '/assets/icons/linkedin.svg',
@@ -97,6 +100,7 @@ export const DEFAULT_LINKS: NewLink[] = [
   {
     text: 'Signal',
     url: 'https://signal.me/#example',
+    description: '',
     newWindow: true,
     iconType: 'image',
     iconValue: '/assets/icons/signal.svg',
@@ -110,6 +114,7 @@ export const DEFAULT_LINKS: NewLink[] = [
   {
     text: 'Matrix',
     url: 'https://matrix.to/#/@example:example.com',
+    description: '',
     newWindow: true,
     iconType: 'image',
     iconValue: '/assets/icons/matrix.svg',
@@ -123,6 +128,7 @@ export const DEFAULT_LINKS: NewLink[] = [
   {
     text: 'Email',
     url: 'https://example.com/contact',
+    description: '',
     newWindow: false,
     iconType: 'fa',
     iconValue: 'fa-solid fa-envelope',

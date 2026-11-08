@@ -20,6 +20,7 @@ const PNG = Buffer.from(
 const LINK: NewLink = {
   text: 'One',
   url: 'https://one.example',
+  description: 'More about one.',
   newWindow: true,
   iconType: 'fa',
   iconValue: 'fa-link',

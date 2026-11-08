@@ -38,6 +38,11 @@ export interface Link {
   position: number;
   text: string;
   url: string;
+  /**
+   * Optional "more info" shown in the front-page hover card. Plain text with a
+   * small markdown subset; empty means the card omits the description.
+   */
+  description: string;
   newWindow: boolean;
   iconType: IconType;
   /** Font Awesome class (e.g. "fa-brands fa-github") or an upload path. */

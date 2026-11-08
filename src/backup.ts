@@ -19,6 +19,7 @@ function toNewLink(link: Link): NewLink {
   return {
     text: link.text,
     url: link.url,
+    description: link.description,
     newWindow: link.newWindow,
     iconType: link.iconType,
     iconValue: link.iconValue,

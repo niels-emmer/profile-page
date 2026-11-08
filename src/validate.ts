@@ -118,6 +118,22 @@ export function parseLines(value: string, maxItems = 25, maxLength = 120): strin
     .slice(0, maxItems);
 }
 
+/** Hard cap for a per-link "more info" description, in characters. */
+export const MAX_LINK_DESCRIPTION = 2000;
+
+/**
+ * Normalise multi-line owner text: CRLF to LF, drop control characters except
+ * newlines, collapse runs of blank lines, trim, and cap the length.
+ */
+export function cleanMultiline(value: string, maxLength = MAX_LINK_DESCRIPTION): string {
+  return value
+    .replace(/\r\n?/g, '\n')
+    .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, maxLength);
+}
+
 const EMAIL = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+$/;
 
 /** A pragmatic email check; the value is published, so keep it simple. */
