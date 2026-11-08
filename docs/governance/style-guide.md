@@ -117,6 +117,10 @@ All HTML is template literals in `render.ts`:
   never break out of a `<script>` element (see the JSON-LD block).
 - **Attribute order** — put the meaningful attributes (`method`, `action`, `name`,
   `value`) first; keep `class` last-ish and stable.
+- **HTML `pattern` values compile with the `v` regex flag** in current browsers.
+  Escape a literal hyphen inside a character class (`[a-z0-9\-]`); an invalid
+  pattern logs an error and can silently block form submission. Keep the pattern
+  in sync with the server validator (`src/validate.ts`).
 
 ## CSS
 

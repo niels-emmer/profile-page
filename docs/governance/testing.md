@@ -81,6 +81,8 @@ test('admin can set the default theme and enable the visitor switcher', async (t
   `/logout`), unauthenticated `/admin` → `/login`, rate-limit trips.
 - **Serialisation** — seed and backup round-trips, including "older file missing
   new fields" normalisation.
+- **Short links** — format/reserved/duplicate rejection, redirect behaviour, and
+  freeing a slug when its link is edited, cleared, or deleted.
 
 ## Anti-patterns
 

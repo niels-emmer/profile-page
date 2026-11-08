@@ -195,6 +195,24 @@ Each link has an **Icon type** selector that shows only the relevant fields:
   [Simple Icons](https://simpleicons.org/) brand icons) or any file under
   `/assets/uploads/`.
 
+### Short links
+
+Each link can publish a short address too. Enter a slug such as `matrix` in the
+**Short link** field to make `<your-domain>/matrix` redirect to the link's real
+URL.
+
+- Slugs are 1–32 characters: lowercase letters, numbers, and inner hyphens.
+  Input is trimmed and lowercased.
+- A slug must be unique across links. `admin`, `login`, `logout`, `health`, and
+  `assets` are reserved so a short link can never shadow an app route.
+- The editor checks availability when you leave the field and again on **Save
+  link**; a duplicate is not saved.
+- There is no separate short-link screen. The slug belongs to its link, so
+  changing or clearing it — or deleting the link — frees the old slug.
+- While a slug is active, the link's hover card shows `Open: your-domain/slug`
+  instead of the raw target. The short URL itself 302-redirects, so the target
+  can change without breaking a shared link.
+
 ## Build, debug, develop
 
 ```bash

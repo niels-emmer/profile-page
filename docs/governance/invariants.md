@@ -138,7 +138,8 @@ A key/value table sidesteps migrations for the most frequently extended area.
 **Enforced by.** `getTheme`/`saveTheme` in `src/db.ts`. If you must change a
 *column* on `profile` or `links`, prefer an **additive** column with a default and
 an idempotent `ALTER TABLE` in `migrateSchema` (`PRAGMA table_info` first), as in
-[ADR-015](decisions.md#adr-015-safe-markdown-subset-for-link-descriptions-and-a-css-hover-card).
+[ADR-015](decisions.md#adr-015-safe-markdown-subset-for-link-descriptions-and-a-css-hover-card)
+and [ADR-016](decisions.md#adr-016-short-links-live-on-the-link-row).
 A destructive or type-changing column change is still a breaking change:
 document it, bump the major/minor version, and provide a reset path (see
 [DEPLOYMENT.md](../DEPLOYMENT.md)).
@@ -213,3 +214,21 @@ LinkStack code is copied.** The verified-badge SVG is the one permitted LinkStac
 asset (MIT), recorded in [THIRD-PARTY.md](../THIRD-PARTY.md).
 
 **Why.** Licensing clarity and a codebase we fully understand.
+
+---
+
+## 16. Short links never shadow app routes
+
+A link's optional `shortlink` resolves at the site root (`GET /<slug>`). Slugs
+must be validated (`shortlinkProblem`), unique across links, and never equal a
+path the app owns (`admin`, `login`, `logout`, `health`, `assets`). **Adding a new
+plain top-level route means adding it to `RESERVED_SHORTLINKS` in
+`src/validate.ts`.**
+
+**Why.** A root-level slug route can silently mask a real route or send traffic
+somewhere the owner did not intend. Uniqueness also keeps a slug's target
+unambiguous.
+
+**Enforced by.** `RESERVED_SHORTLINKS` / `shortlinkProblem` (`src/validate.ts`),
+the save-route checks in `src/app.ts`, the partial unique index on
+`links.shortlink`, and the short-link tests in `tests/routes.test.ts`.

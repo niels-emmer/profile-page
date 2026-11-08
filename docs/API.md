@@ -1,7 +1,8 @@
 # API and data model
 
-The app is server-rendered; there is no JSON API. This document describes the
-HTTP routes, the SQLite schema, and the seed-file format.
+The app is server-rendered; there is no general-purpose JSON API (a few
+admin/agent endpoints return JSON). This document describes the HTTP routes, the
+SQLite schema, and the seed-file format.
 
 ## Routes
 
