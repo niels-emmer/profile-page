@@ -206,15 +206,6 @@ test('renderProfilePage escapes hostile link descriptions', () => {
   assert.match(html, /\[x\]\(javascript:alert\(1\)\)/);
 });
 
-test('renderProfilePage picks a readable foreground for the accent', () => {
-  const base = { profile, links: [link], baseUrl: 'https://example.com' };
-  assert.match(renderProfilePage({ ...base, theme }), /--accent-fg:#ffffff/);
-  assert.match(
-    renderProfilePage({ ...base, theme: { ...theme, accentColor: '#ffdd00' } }),
-    /--accent-fg:#222222/,
-  );
-});
-
 test('the hover card icon inherits the card colour, not the button icon colour', () => {
   const html = renderProfilePage({
     profile,

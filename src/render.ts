@@ -238,7 +238,7 @@ export function renderProfilePage(ctx: PageContext): string {
   const lightVars = `--bg:${backgroundValue(theme.backgroundLight, theme.backgroundImageLight)};--fg:${sanitizeCss(theme.textLight)};`;
   const themeStyle =
     `<style>` +
-    `:root{--accent:${sanitizeCss(theme.accentColor)};--accent-fg:${readableTextColor(theme.accentColor)};}` +
+    `:root{--accent:${sanitizeCss(theme.accentColor)};}` +
     `:root[data-theme='dark']{${darkVars}}` +
     `:root[data-theme='light']{${lightVars}}` +
     `@media (prefers-color-scheme: dark){:root:not([data-theme]){${darkVars}}}` +

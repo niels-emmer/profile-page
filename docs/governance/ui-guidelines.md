@@ -107,8 +107,6 @@ Variables set per request in a `<style>` block emitted by `render.ts`:
 
 ```
 --accent     the accent colour (theme.accentColor)
---accent-fg  black or white text chosen for legibility on --accent
-             (readableTextColor; available to accent-filled surfaces)
 --bg         the composed background (colour/gradient/image+veil)
 --fg         the text colour
 ```
