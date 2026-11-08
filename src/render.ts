@@ -1,5 +1,6 @@
 import { COLOR_SCHEMES, readableTextColor } from './colors.ts';
 import { DEFAULT_ENTITY } from './defaults.ts';
+import { escapeHtml } from './html.ts';
 import { QR_QUIET_ZONE, qrMatrix, qrPathData } from './qr.ts';
 import type {
   BackgroundPosition,
@@ -23,14 +24,8 @@ const BADGE_SVG =
 /** Where "Get your own profile page" points. */
 const PROJECT_URL = 'https://github.com/niels-emmer/profile-page';
 
-export function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
+// Re-exported so every existing importer keeps one public surface.
+export { escapeHtml };
 
 /**
  * Allow only characters that can appear in a CSS colour or gradient value.
