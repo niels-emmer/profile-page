@@ -133,7 +133,8 @@ Variables set per request in a `<style>` block emitted by `render.ts`:
   hover after a 0.6s delay and lingers 0.8s after the pointer leaves; an invisible
   bridge over the gap lets the pointer travel from the button into the card.
   Keyboard focus shows it immediately, and it is only revealed under
-  `@media (hover: hover)`, so touch devices keep plain tap-to-open. The overlay is
+  `@media (hover: hover)`; touch devices use the info trigger below and tapping
+  the button still navigates. The overlay is
   absolutely positioned (no layout shift); the card uses a slightly translucent,
   blurred theme-following surface plus `--fg`, caps its width to the viewport and
   its description height, and raises the hovered row's `z-index` above the next
@@ -141,6 +142,14 @@ Variables set per request in a `<style>` block emitted by `render.ts`:
   transition. Public hover-card classes are namespaced `link-hover-*`:
   the admin loads this stylesheet too, so never reuse the admin `.link-card` name
   (doing so hid every link editor in the admin panel).
+- **Touch link details** — under `@media (hover: none)` a `.link-more-trigger`
+  (ⓘ) sits on the button's right edge and links to `#link-more-<id>`. The card
+  becomes a fixed bottom sheet via `:target`; `.link-more-backdrop` and
+  `.link-more-close` clear the fragment, and `.link-more-open` is the full-width
+  action. The trigger is a sibling of the button, never nested in the anchor, so
+  the link keeps its normal tap target. `link-more.js` adds focus restoration
+  and Escape; opening and closing work without JS. This mirrors the QR modal's
+  `:target` pattern and keeps the desktop hover card unchanged.
 - **Entrance animations** — `.button-entrance` (`popUp`, staggered via `--delay`)
   and `.fadein`. Both are disabled under `prefers-reduced-motion: reduce`.
 - **Theme switcher** — when the owner enables visitor selection, a single

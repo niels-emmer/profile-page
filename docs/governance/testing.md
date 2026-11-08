@@ -76,7 +76,8 @@ test('admin can set the default theme and enable the visitor switcher', async (t
 - **Every validator** — the boundary values, not just the happy path (e.g. opacity
   `-1`, `101`, `500`; a non-hex colour; an external asset URL).
 - **Rendering** — presence of the expected markup, escaping of hostile input, and
-  the composed CSS value (`backgroundValue`).
+  the composed CSS value (`backgroundValue`). The touch details trigger, target
+  sheet, and its script are rendered only when links exist.
 - **Security behaviour** — CSRF on every state-changing POST (including
   `/logout`), unauthenticated `/admin` → `/login`, rate-limit trips.
 - **Serialisation** — seed and backup round-trips, including "older file missing

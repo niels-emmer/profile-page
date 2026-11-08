@@ -257,8 +257,8 @@ existing anchor and a **sibling** card (never a nested anchor) with the icon at
 double size, the title, the rendered description, and a footer with plain
 `Open:` text followed by a real anchor for the URL (without its scheme) that
 reuses the link's URL, target, and rel attributes. The card is an absolute overlay revealed by `:hover` /
-`:focus-within` inside `@media (hover: hover)` only, so touch devices never get
-a stuck card and tapping still navigates. To keep the card reachable it appears
+`:focus-within` inside `@media (hover: hover)` only. ADR-017 adds a touch-only
+info trigger and bottom sheet; tapping the link itself still navigates. To keep the card reachable it appears
 after a 0.6 s hover delay, lingers 0.8 s after the pointer leaves, and a
 transparent bridge spans the gap between the button and the card. The hovered
 row raises its `z-index`, so the card is never painted under the next button. It
@@ -309,3 +309,31 @@ kept in sync if a new plain top-level route is added. Existing databases gain
 the nullable column through the same idempotent additive migration as ADR-015,
 and seed/backup validation rejects malformed, reserved, and duplicate slugs so a
 restore cannot introduce an invalid short link.
+
+---
+
+## ADR-017: Touch access to link details via an info trigger and bottom sheet
+
+**Context.** ADR-015's link details card is revealed by hover or keyboard focus
+and is deliberately hidden on touch devices, where the button keeps navigating.
+That leaves touch users unable to read a link's description. Long-press — the
+obvious analogue — conflicts with the OS link preview/context menu on iOS and
+Android, is undiscoverable, and is hard to make accessible. A first tap that only
+reveals details also breaks the expected tap-to-open behaviour of a link.
+
+**Decision.** Render a small ⓘ trigger beside each link, shown only under
+`@media (hover: none)`. The trigger is a sibling of the button (never nested
+inside the anchor), so tapping the link still navigates. It links to
+`#link-more-<id>`; CSS `:target` turns the existing details card into a fixed
+bottom sheet with a backdrop, close link, and a full-width **Open** action. The
+backdrop and close links clear the fragment; no JavaScript is required to open
+or close the sheet. `public/js/link-more.js` only adds focus restoration and
+Escape, mirroring `qr.js`. Desktop hover/focus behaviour is unchanged.
+
+**Consequences.** Touch users get the description and short-link action without
+losing tap-to-open, and the interaction is discoverable through a visible
+control. The sheet reuses the card markup, so there is one source of truth for
+the description and destination. The cost is a touch-only per-link affordance
+and a separate public script (loaded only when links exist). If a future change
+adds another card action, both the hover footer and the sheet's full-width
+action must be kept in sync.

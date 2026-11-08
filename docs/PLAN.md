@@ -174,6 +174,21 @@ Per-link shareable slugs (not in the original plan):
 
 ---
 
+## Added after Phase 8 — Touch link details
+
+Mobile access to the hover card:
+
+- A touch-only `.link-more-trigger` (ⓘ) sits beside each link; it targets
+  `#link-more-<id>` and CSS `:target` opens the same card as a fixed bottom
+  sheet. The link itself still navigates.
+- `.link-more-backdrop` and `.link-more-close` clear the fragment; the sheet has
+  a full-width `.link-more-open` action. No JS is needed to open or close.
+- `public/js/link-more.js` mirrors `qr.js` for focus restoration and Escape.
+- Long-press was rejected: it conflicts with the OS link preview/context menu on
+  iOS and Android and is not discoverable or accessible.
+
+---
+
 ## Generalisation for public release
 
 The personal profile data was removed from the repo (it lives only in the
