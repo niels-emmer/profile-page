@@ -41,7 +41,9 @@ src/
   auth.ts       scrypt hashing, HMAC session tokens, CSRF, RateLimiter, ensureAuth, isDefaultPassword
   validate.ts   shared input validation (URLs, asset refs, enums, hex colours, opacity)
   render.ts     renderProfilePage, renderLoginPage, renderSetPasswordPage, renderAdminPage, discovery files,
-                escapeHtml, sanitizeCss, backgroundValue (per-theme layered background)
+                escapeHtml (re-exported), sanitizeCss, backgroundValue (per-theme layered background)
+  html.ts       escapeHtml, shared by the page and markdown renderers
+  markdown.ts   dependency-free markdown subset for link descriptions (no HTML, links, or images)
   qr.ts         dependency-free QR Code encoder (byte mode, level M) → module matrix + SVG path
   colors.ts     COLOR_SCHEMES presets, readableTextColor, shade, generateGradient
   upload.ts     detectImageType (magic bytes), saveImage, deleteUpload, isSvg, sanitizeSvg
@@ -89,7 +91,7 @@ Four tables (`src/db.ts`):
 | Table | Shape | Notes |
 |---|---|---|
 | `profile` | single row, `id = 1` | name, tagline, description, avatar_path |
-| `links` | one row per link | ordered by `position`; colours stored per link |
+| `links` | one row per link | ordered by `position`; colours and an optional "more info" description per link |
 | `settings` | key/value | **all theme state** under `theme.*` keys |
 | `auth` | single row, `id = 1` | password hash + salt, session secret |
 
@@ -115,7 +117,8 @@ every link, survive restarts.
 access — it receives plain objects and returns strings. Every interpolated value
 passes through `escapeHtml`; every CSS value through `sanitizeCss`.
 
-- **`renderProfilePage`** — the public page: profile, links, discovery meta
+- **`renderProfilePage`** — the public page: profile, links (each with a
+  hover/focus "more info" card), discovery meta
   (`canonical`, `theme-color`, schema.org `Person` JSON-LD, `rel="me"`,
   `rel="alternate"`), a per-request `<style>` block for the theme, the
   avatar-triggered QR modal (an inline SVG built by `qr.ts`), and the visitor

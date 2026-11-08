@@ -98,6 +98,7 @@ SQLite, opened with WAL mode and foreign keys on. Created on first run.
 | `position` | INTEGER | Display order, ascending |
 | `text` | TEXT | Button label |
 | `url` | TEXT | `http(s)` only |
+| `description` | TEXT | Optional "more info" (max 2000 chars); a small markdown subset, shown in the public-page hover card |
 | `new_window` | INTEGER | 0/1 |
 | `icon_type` | TEXT | `fa` or `image` |
 | `icon_value` | TEXT | Font Awesome class, or an image path |
@@ -108,6 +109,12 @@ SQLite, opened with WAL mode and foreign keys on. Created on first run.
 | `color_to` | TEXT | Hex (used when `gradient`) |
 | `border_color` | TEXT NULL | NULL means no border |
 | `created_at` / `updated_at` | TEXT | `datetime('now')` |
+
+`description` was introduced after the first release. On startup `openDatabase`
+checks `PRAGMA table_info(links)` and runs
+`ALTER TABLE links ADD COLUMN description TEXT NOT NULL DEFAULT ''` only when
+the column is missing, so an existing database keeps every link with an empty
+description. See [ADR-015](governance/decisions.md#adr-015-safe-markdown-subset-for-link-descriptions-and-a-css-hover-card).
 
 ### `settings` (key/value)
 
@@ -218,6 +225,7 @@ idempotent and never overwrites existing content.
   "links": [
     {
       "text": "Example", "url": "https://example.com", "newWindow": true,
+      "description": "**Now shipping** — a short note shown in the hover card.",
       "iconType": "fa", "iconValue": "fa-solid fa-link", "iconColor": null,
       "textColor": "#ffffff", "colorMode": "solid",
       "colorFrom": "#0085ff", "colorTo": "#0085ff", "borderColor": null
@@ -228,9 +236,12 @@ idempotent and never overwrites existing content.
 
 Image paths in a seed file refer to files under `DATA_DIR/uploads/`; the JSON and
 the uploads must travel together. `backgroundImageDark` / `backgroundImageLight`,
-`ogImagePath`, `defaultMode`, `visitorToggle`, and the whole `entity` object are
-optional: older seed files without them are filled in with the defaults above
-(`entity` defaults to every field empty).
+`ogImagePath`, `defaultMode`, `visitorToggle`, a link's `description`, and the
+whole `entity` object are optional: older seed files without them are filled in
+with the defaults above (`entity` defaults to every field empty and a missing
+link description to an empty string). A non-string link `description` is
+rejected, and the text is normalised (CRLF to LF, control characters dropped)
+and capped at 2000 characters.
 
 ## Backup archive format
 

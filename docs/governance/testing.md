@@ -21,6 +21,7 @@ One file per area:
 | `colors.test.ts` | presets, `readableTextColor`, `shade`, gradients |
 | `upload.test.ts` | magic-byte detection, size caps, path handling |
 | `render.test.ts` | HTML output, escaping, theme/background composition |
+| `markdown.test.ts` | the safe markdown subset: formatting, escaping, hostile input |
 | `routes.test.ts` | every HTTP route via `app.request(...)` |
 | `seed.test.ts` | seed parsing, validation, application |
 | `tar.test.ts` | ustar round-trip, traversal rejection |
