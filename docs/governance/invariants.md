@@ -136,8 +136,11 @@ theme setting needs **no schema change**.
 A key/value table sidesteps migrations for the most frequently extended area.
 
 **Enforced by.** `getTheme`/`saveTheme` in `src/db.ts`. If you must change a
-*column* (e.g. `profile`, `links`), that is a breaking change: document it, bump
-the major/minor version, and provide a reset path (see
+*column* on `profile` or `links`, prefer an **additive** column with a default and
+an idempotent `ALTER TABLE` in `migrateSchema` (`PRAGMA table_info` first), as in
+[ADR-015](decisions.md#adr-015-safe-markdown-subset-for-link-descriptions-and-a-css-hover-card).
+A destructive or type-changing column change is still a breaking change:
+document it, bump the major/minor version, and provide a reset path (see
 [DEPLOYMENT.md](../DEPLOYMENT.md)).
 
 ---
