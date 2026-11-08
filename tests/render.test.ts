@@ -224,7 +224,7 @@ test('renderProfilePage exposes the touch details trigger and sheet', () => {
   assert.match(html, /<span class="link-button-wrap">/);
   assert.match(
     html,
-    /<a class="link-more-trigger" href="#link-more-1" style="[^"]*" aria-label="More information about GitHub"><i class="fa-solid fa-info"/,
+    /<a class="link-more-trigger" href="#link-more-1" style="[^"]*" aria-label="More information about GitHub"><span aria-hidden="true">\*<\/span>/,
   );
   assert.match(
     html,

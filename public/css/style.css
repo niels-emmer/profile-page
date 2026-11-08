@@ -445,17 +445,26 @@ button {
 
 .link-more-trigger {
   position: absolute;
-  top: 50%;
+  top: 0.4rem;
   right: 0.4rem;
   z-index: 2;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
   place-items: center;
   border-radius: 9999px;
   background: rgba(127, 127, 127, 0.25);
-  font-size: 0.8rem;
+  font-size: 0.6rem;
+  font-weight: 700;
   line-height: 1;
-  transform: translateY(-50%);
+}
+
+/* The visible dot is deliberately small; the transparent pseudo-element keeps
+   the tap target at ~44px without changing the card's look. */
+.link-more-trigger::after {
+  position: absolute;
+  inset: -0.75rem;
+  border-radius: 50%;
+  content: '';
 }
 
 .link-more-close {
@@ -703,8 +712,8 @@ img.link-hover-icon {
     box-sizing: border-box;
     width: 300px;
     max-width: 100%;
-    padding-left: 3rem;
-    padding-right: 3rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
   }
 
   .link-more-trigger {
