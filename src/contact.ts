@@ -133,7 +133,11 @@ export function renderContactJson(
       ...(isEmail(entity.email) ? { email: entity.email } : {}),
       ...(isTelephone(entity.telephone) ? { telephone: entity.telephone } : {}),
       sameAs: links.map((link) => link.url),
-      links: links.map((link) => ({ text: link.text, url: link.url })),
+      links: links.map((link) => ({
+        text: link.text,
+        url: link.url,
+        ...(link.description.length > 0 ? { description: link.description } : {}),
+      })),
     },
     null,
     2,
