@@ -252,7 +252,7 @@ The description is persisted in a new `links.description` column. Because
 runs an idempotent `PRAGMA table_info(links)` check and adds the column only
 when it is missing — an additive migration, not a breaking reset.
 
-On the public page each link is wrapped in a positioned `.link-item` holding the
+On the public page each link is wrapped in a positioned `.link-hover-item` holding the
 existing anchor and a **sibling** card (never a nested anchor) with the icon at
 double size, the title, the rendered description, and a real `GO` anchor that
 reuses the link's URL, target, and rel attributes. The card is an absolute

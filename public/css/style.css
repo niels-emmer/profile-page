@@ -419,11 +419,11 @@ button {
    so the card can appear without shifting the layout. The card is a sibling of
    the anchor — never nested — and is only revealed on devices that can hover, so
    a touch device never leaves a card stuck on screen after a tap. */
-.link-item {
+.link-hover-item {
   position: relative;
 }
 
-.link-card {
+.link-hover-card {
   position: absolute;
   bottom: calc(100% + 0.5rem);
   left: 50%;
@@ -449,20 +449,20 @@ button {
 }
 
 /* The card surface follows the page theme, like the QR modal panel. */
-:root[data-theme='dark'] .link-card {
+:root[data-theme='dark'] .link-hover-card {
   border-color: rgba(255, 255, 255, 0.14);
   background: #151826;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .link-card {
+  :root:not([data-theme]) .link-hover-card {
     border-color: rgba(255, 255, 255, 0.14);
     background: #151826;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   }
 }
 
-.link-card-head {
+.link-hover-head {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -472,7 +472,7 @@ button {
 
 /* The same icon at double size; font-size enlarges Font Awesome glyphs and
    width/height enlarge image icons. */
-.link-card-icon {
+.link-hover-icon {
   width: 2.5rem;
   height: 2.5rem;
   padding: 0;
@@ -481,14 +481,14 @@ button {
   flex: none;
 }
 
-.link-card-title {
+.link-hover-title {
   font-size: 15px;
   font-weight: 700;
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
 
-.link-card-description {
+.link-hover-description {
   width: 100%;
   max-height: 9rem;
   overflow-y: auto;
@@ -498,26 +498,26 @@ button {
   overflow-wrap: anywhere;
 }
 
-.link-card-description p {
+.link-hover-description p {
   margin: 0 0 0.5em;
 }
-.link-card-description p:last-child,
-.link-card-description ul:last-child,
-.link-card-description ol:last-child {
+.link-hover-description p:last-child,
+.link-hover-description ul:last-child,
+.link-hover-description ol:last-child {
   margin-bottom: 0;
 }
-.link-card-description ul,
-.link-card-description ol {
+.link-hover-description ul,
+.link-hover-description ol {
   margin: 0.25em 0;
   padding-left: 1.2em;
 }
-.link-card-description hr {
+.link-hover-description hr {
   height: 0;
   margin: 0.5em 0;
   border: 0;
   border-top: 1px solid rgba(127, 127, 127, 0.4);
 }
-.link-card-description code {
+.link-hover-description code {
   padding: 0 0.25em;
   border-radius: 4px;
   background: rgba(127, 127, 127, 0.2);
@@ -525,7 +525,7 @@ button {
   font-size: 0.9em;
 }
 
-.link-card-go {
+.link-hover-go {
   display: inline-block;
   margin-top: 0.15rem;
   padding: 0.35rem 1.4rem;
@@ -536,11 +536,11 @@ button {
   font-weight: 700;
   letter-spacing: 0.06em;
 }
-.link-card-go:hover {
+.link-hover-go:hover {
   color: #ffffff;
   opacity: 0.9;
 }
-.link-card-go:focus-visible {
+.link-hover-go:focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: 2px;
 }
@@ -548,13 +548,13 @@ button {
 @media (hover: hover) {
   /* Raise the hovered row above later siblings so its card is never painted
      underneath the next button. */
-  .link-item:hover,
-  .link-item:focus-within {
+  .link-hover-item:hover,
+  .link-hover-item:focus-within {
     z-index: 30;
   }
 
-  .link-item:hover .link-card,
-  .link-item:focus-within .link-card {
+  .link-hover-item:hover .link-hover-card,
+  .link-hover-item:focus-within .link-hover-card {
     opacity: 1;
     visibility: visible;
     transform: translate(-50%, 0);
@@ -562,7 +562,7 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .link-card {
+  .link-hover-card {
     transition: none;
   }
 }

@@ -152,15 +152,15 @@ function renderLink(link: Link, index: number): string {
   const description = renderMarkdown(link.description);
   const descriptionMarkup =
     description.length > 0
-      ? `<div class="link-card-description">${description}</div>`
+      ? `<div class="link-hover-description">${description}</div>`
       : '';
   return (
-    `<div style="--delay: ${index + 1}s" class="button-entrance link-item">` +
+    `<div style="--delay: ${index + 1}s" class="button-entrance link-hover-item">` +
     `<a class="button button-hover icon-hover" style="color: ${sanitizeCss(link.textColor)}; background-image: ${background};${border}" ${href}>${linkIcon(link)}${escapeHtml(link.text)}</a>` +
-    `<div class="link-card">` +
-    `<div class="link-card-head">${linkIcon(link, 'link-card-icon')}<span class="link-card-title">${escapeHtml(link.text)}</span></div>` +
+    `<div class="link-hover-card">` +
+    `<div class="link-hover-head">${linkIcon(link, 'link-hover-icon')}<span class="link-hover-title">${escapeHtml(link.text)}</span></div>` +
     descriptionMarkup +
-    `<a class="link-card-go" ${href}>GO</a>` +
+    `<a class="link-hover-go" ${href}>GO</a>` +
     `</div>` +
     `</div>`
   );
