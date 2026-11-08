@@ -121,6 +121,47 @@ export function parseLines(value: string, maxItems = 25, maxLength = 120): strin
 /** Hard cap for a per-link "more info" description, in characters. */
 export const MAX_LINK_DESCRIPTION = 2000;
 
+/* ------------------------------- short links ---------------------------- */
+
+/** Longest accepted short-link slug, in characters. */
+export const MAX_SHORTLINK_LENGTH = 32;
+
+/**
+ * A short-link slug: lowercase letters, digits, and inner hyphens only. Dots,
+ * slashes, and spaces are rejected so a slug can never look like a file path,
+ * a nested route, or an open redirect.
+ */
+const SHORTLINK = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+
+/**
+ * Paths the app already owns. A short link may never shadow them, whether or
+ * not they are routed for GET today (`logout` is POST-only, for example).
+ */
+const RESERVED_SHORTLINKS: readonly string[] = [
+  'admin',
+  'login',
+  'logout',
+  'health',
+  'assets',
+];
+
+/** Canonical form: trimmed and lowercased. Empty means "no short link". */
+export function normalizeShortlink(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/**
+ * Why a short-link slug is not usable, or null when it is (or is empty).
+ * Uniqueness is a database question and is checked separately.
+ */
+export function shortlinkProblem(value: string): 'format' | 'reserved' | null {
+  const slug = normalizeShortlink(value);
+  if (slug.length === 0) return null;
+  if (slug.length > MAX_SHORTLINK_LENGTH || !SHORTLINK.test(slug)) return 'format';
+  if (RESERVED_SHORTLINKS.includes(slug)) return 'reserved';
+  return null;
+}
+
 /**
  * Normalise multi-line owner text: CRLF to LF, drop control characters except
  * newlines, collapse runs of blank lines, trim, and cap the length.

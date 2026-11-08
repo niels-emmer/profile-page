@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS links (
   text        TEXT NOT NULL DEFAULT '',
   url         TEXT NOT NULL DEFAULT '',
   description TEXT NOT NULL DEFAULT '',
+  shortlink   TEXT,
   new_window  INTEGER NOT NULL DEFAULT 1,
   icon_type   TEXT NOT NULL DEFAULT 'fa',
   icon_value  TEXT NOT NULL DEFAULT '',
@@ -78,6 +79,15 @@ function migrateSchema(db: DatabaseSync): void {
   if (!columns.some((column) => column.name === 'description')) {
     db.exec("ALTER TABLE links ADD COLUMN description TEXT NOT NULL DEFAULT ''");
   }
+  if (!columns.some((column) => column.name === 'shortlink')) {
+    db.exec('ALTER TABLE links ADD COLUMN shortlink TEXT');
+  }
+  // A short link is active only while set; NULL is "none". A partial unique
+  // index keeps two links from claiming the same slug without making the empty
+  // value unique.
+  db.exec(
+    'CREATE UNIQUE INDEX IF NOT EXISTS links_shortlink_unique ON links(shortlink) WHERE shortlink IS NOT NULL',
+  );
 }
 
 /* ------------------------------- profile ------------------------------- */
@@ -131,6 +141,7 @@ interface LinkRow {
   text: string;
   url: string;
   description: string;
+  shortlink: string | null;
   new_window: number;
   icon_type: string;
   icon_value: string;
@@ -149,6 +160,7 @@ function toLink(row: LinkRow): Link {
     text: row.text,
     url: row.url,
     description: row.description,
+    shortlink: row.shortlink !== null && row.shortlink.length > 0 ? row.shortlink : null,
     newWindow: row.new_window === 1,
     iconType: row.icon_type === 'image' ? 'image' : 'fa',
     iconValue: row.icon_value,
@@ -173,6 +185,14 @@ export function getLink(db: DatabaseSync, id: number): Link | undefined {
   return row === undefined ? undefined : toLink(row);
 }
 
+/** The link that currently owns a short-link slug, if any. */
+export function getLinkByShortlink(db: DatabaseSync, shortlink: string): Link | undefined {
+  const row = db
+    .prepare('SELECT * FROM links WHERE shortlink = ?')
+    .get(shortlink) as unknown as LinkRow | undefined;
+  return row === undefined ? undefined : toLink(row);
+}
+
 export function createLink(db: DatabaseSync, link: NewLink): number {
   const next = db
     .prepare('SELECT COALESCE(MAX(position), -1) + 1 AS pos FROM links')
@@ -180,15 +200,16 @@ export function createLink(db: DatabaseSync, link: NewLink): number {
   const result = db
     .prepare(
       `INSERT INTO links
-         (position, text, url, description, new_window, icon_type, icon_value, icon_color,
-          text_color, color_mode, color_from, color_to, border_color)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (position, text, url, description, shortlink, new_window, icon_type, icon_value,
+          icon_color, text_color, color_mode, color_from, color_to, border_color)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       next.pos,
       link.text,
       link.url,
       link.description,
+      link.shortlink,
       link.newWindow ? 1 : 0,
       link.iconType,
       link.iconValue,
@@ -205,14 +226,15 @@ export function createLink(db: DatabaseSync, link: NewLink): number {
 export function updateLink(db: DatabaseSync, id: number, link: NewLink): void {
   db.prepare(
     `UPDATE links SET
-       text = ?, url = ?, description = ?, new_window = ?, icon_type = ?, icon_value = ?,
-       icon_color = ?, text_color = ?, color_mode = ?, color_from = ?, color_to = ?,
-       border_color = ?, updated_at = datetime('now')
+       text = ?, url = ?, description = ?, shortlink = ?, new_window = ?, icon_type = ?,
+       icon_value = ?, icon_color = ?, text_color = ?, color_mode = ?, color_from = ?,
+       color_to = ?, border_color = ?, updated_at = datetime('now')
      WHERE id = ?`,
   ).run(
     link.text,
     link.url,
     link.description,
+    link.shortlink,
     link.newWindow ? 1 : 0,
     link.iconType,
     link.iconValue,

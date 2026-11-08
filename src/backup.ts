@@ -20,6 +20,7 @@ function toNewLink(link: Link): NewLink {
     text: link.text,
     url: link.url,
     description: link.description,
+    shortlink: link.shortlink,
     newWindow: link.newWindow,
     iconType: link.iconType,
     iconValue: link.iconValue,

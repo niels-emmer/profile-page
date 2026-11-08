@@ -274,3 +274,37 @@ emphasis, no links); unsupported syntax shows as literal text, which is the safe
 failure mode. `contact.json` carries the description as plain text and
 `llms.txt` collapses it to one line. Existing databases migrate automatically
 and existing links read back with an empty description.
+
+---
+
+## ADR-016: Short links live on the link row
+
+**Context.** The owner wants memorable, shareable URLs for links whose real
+targets are cryptic (Matrix and Signal are the motivating examples). A separate
+short-link registry would need its own maintenance screen and could leave stale
+entries behind; this is a deliberately small, single-user app with no
+unattended cleanup jobs.
+
+**Decision.** Store one optional `shortlink` slug on each link
+(`links.shortlink`, nullable). A partial unique index
+(`WHERE shortlink IS NOT NULL`) enforces uniqueness without making "no short
+link" a duplicate. `GET /<slug>` responds `302` with `Cache-Control: no-store`
+to the link's URL, and the route sits immediately before the root-file handler
+so real routes always win. Slugs are 1–32 lowercase letters, digits, and inner
+hyphens; they are normalised (trimmed/lowercased), must be unique across links,
+and may not shadow app routes (`admin`, `login`, `logout`, `health`, `assets`).
+The editor checks availability on blur through
+`GET /admin/shortlink/check` and the save route validates again as the
+authoritative gate. There is no separate table, admin section, or short-link
+lifecycle: a slug exists only while it is set on a link, so editing, clearing,
+or deleting that link frees it immediately. While active, the public hover
+card's `Open:` footer shows and opens the short link instead of the target.
+
+**Consequences.** Short links cannot outlive their link, which removes the need
+for a maintenance screen. A 302 rather than a 301 is deliberate: both the target
+and the slug are editable, and a cached permanent redirect would keep pointing
+at an old target. Because slugs occupy the site root, the reserved list must be
+kept in sync if a new plain top-level route is added. Existing databases gain
+the nullable column through the same idempotent additive migration as ADR-015,
+and seed/backup validation rejects malformed, reserved, and duplicate slugs so a
+restore cannot introduce an invalid short link.

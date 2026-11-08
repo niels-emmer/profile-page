@@ -53,6 +53,7 @@ const link: Link = {
   text: 'GitHub',
   url: 'https://github.com/example',
   description: '',
+  shortlink: null,
   newWindow: true,
   iconType: 'fa',
   iconValue: 'fa-brands fa-github',
@@ -192,6 +193,21 @@ test('the hover-card open link drops http and https schemes', () => {
     baseUrl: 'https://example.com',
   });
   assert.match(http, /Open: <a [^>]*>teamrockstars\.nl<\/a>/);
+});
+
+test('the hover-card open link uses an active short link', () => {
+  const html = renderProfilePage({
+    profile,
+    links: [{ ...link, shortlink: 'matrix' }],
+    theme,
+    baseUrl: 'https://example.com',
+  });
+  // The footer shows and opens the short link; the button keeps the real target.
+  assert.match(
+    html,
+    /<span class="link-hover-open">Open: <a rel="noopener noreferrer nofollow noindex" href="https:\/\/example\.com\/matrix" target="_blank">example\.com\/matrix<\/a><\/span>/,
+  );
+  assert.match(html, /href="https:\/\/github\.com\/example"/);
 });
 
 test('renderProfilePage escapes hostile link descriptions', () => {
@@ -492,6 +508,23 @@ test('renderAdminPage includes every form and the saved banner', () => {
   assert.match(html, /fontawesome\.com\/search/);
   assert.match(html, /Saved\./);
   assert.match(html, /GitHub/);
+});
+
+test('renderAdminPage renders the short-link field with the site prefix', () => {
+  const html = renderAdminPage({
+    profile,
+    links: [{ ...link, shortlink: 'matrix' }],
+    theme,
+    csrfToken: 'token-123',
+    saved: false,
+    passwordManagedByEnv: false,
+    baseUrl: 'https://example.com/',
+  });
+  assert.match(html, /Short link \(optional, example\.com\/\)/);
+  assert.match(html, /name="shortlink" value="matrix"/);
+  assert.match(html, /data-shortlink-check="\/admin\/shortlink\/check"/);
+  // The link editor and the add-link form each have the field.
+  assert.equal(html.match(/name="shortlink"/g)?.length, 2);
 });
 
 test('renderAdminPage renders the link description as an escaped textarea', () => {
