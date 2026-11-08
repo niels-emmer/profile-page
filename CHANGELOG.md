@@ -63,6 +63,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Short-link buttons**: the public link button now uses the active short link
+  as its destination, matching the hover-card footer. The real URL remains the
+  fallback when no slug is set.
+- **Touch link details**: on touch devices, a small **ⓘ** button beside each
+  link opens its details card as a bottom sheet with a full-width **Open**
+  action. Tapping the link itself still opens it; the desktop hover card is
+  unchanged. The sheet reuses the QR modal's CSS `:target` pattern (works
+  without JS) with a small script for focus handling and Escape.
 - The reverse-proxy Docker network is now configurable via `PROXY_NETWORK` in
   `.env` (default `proxy-net`) instead of being hardcoded in
   `docker-compose.yml` — the quick start no longer assumes a network named

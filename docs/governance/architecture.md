@@ -61,6 +61,7 @@ public/
                      icon-type toggle, icon upload, OG-card generation)
   js/theme.js        visitor theme switcher (loaded synchronously in <head> when enabled)
   js/qr.js           QR modal enhancement (focus handling and Escape)
+  js/link-more.js    touch link-details sheet enhancement (focus handling and Escape)
   icons/*.svg        bundled Simple Icons (white fill)
   fonts/             Inter + Font Awesome woff2
   default-avatar.svg, favicon.png
@@ -123,7 +124,8 @@ passes through `escapeHtml`; every CSS value through `sanitizeCss`.
 
 - **`renderProfilePage`** — the public page: profile, links (each with a
   hover/focus "more info" card whose `Open:` footer shows the link's short link
-  when one is active), discovery meta
+  when one is active; touch devices get a small ⓘ trigger that opens the same
+  card as a fixed bottom sheet), discovery meta
   (`canonical`, `theme-color`, schema.org `Person` JSON-LD, `rel="me"`,
   `rel="alternate"`), a per-request `<style>` block for the theme, the
   avatar-triggered QR modal (an inline SVG built by `qr.ts`), and the visitor
