@@ -482,13 +482,14 @@ button {
   flex: none;
 }
 
-/* Image icons are usually white brand marks; a neutral chip keeps them visible
-   on the white light-theme card as well as the dark card. */
+/* Image icons are usually white brand marks. An opaque mid-tone plate keeps
+   both white and dark logos readable on the white light-theme card and on the
+   dark card (a translucent wash would leave white icons invisible on white). */
 img.link-hover-icon {
   padding: 0.3rem;
   box-sizing: border-box;
   border-radius: 8px;
-  background: rgba(127, 127, 127, 0.18);
+  background: #7f7f7f;
 }
 
 .link-hover-title {
