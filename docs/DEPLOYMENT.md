@@ -118,15 +118,15 @@ git pull
 docker compose up -d --build
 ```
 
-The database schema is created on first run, and a representative demo profile
-is seeded if the database has no profile yet. Seeding is idempotent: once a
-profile exists, nothing is touched, so your edits (including deleting every link)
-survive restarts.
+On startup the schema is created if missing. **Additive** schema changes are
+applied automatically: `openDatabase` checks `PRAGMA table_info` and runs
+`ALTER TABLE … ADD COLUMN … DEFAULT …` only when a column is absent (for example
+`links.description` added for link "more info" text). Existing rows keep working
+with the default value, so an upgrade does not need a database reset. Back up
+`data/` before upgrading anyway.
 
-There is currently **no automatic migration** — if a release changes the schema,
-an existing `profile.db` may be missing new columns. Back up `data/` before
-upgrading, and if the app reports a missing column, reset the database (see
-below) and re-apply your seed.
+Seeding is idempotent: once a profile exists, nothing is touched, so your edits
+(including deleting every link) survive restarts.
 
 ## Resetting
 

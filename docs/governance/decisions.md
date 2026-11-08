@@ -49,6 +49,10 @@ in a `settings` key/value table under `theme.*` keys. Only `profile`, `links`, a
 on `profile`/`links` is a breaking change requiring a documented reset path. No
 ORM, no query builder — parameterised SQL by hand.
 
+> Additive columns are handled since ADR-015: an idempotent `ALTER TABLE` in
+> `migrateSchema` adds a missing column with a default, so no reset is needed for
+> that case. Destructive/type-changing columns still need the reset path above.
+
 ---
 
 ## ADR-004: Server-rendered HTML, no frontend framework
