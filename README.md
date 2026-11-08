@@ -51,6 +51,11 @@ footprint, and your data stays on your own disk.
 - **Link icons** — Font Awesome classes (with a lookup link) or uploaded images;
   the editor shows only the fields for the chosen icon type, and an **Upload
   icon** button resizes and converts your graphic in the browser.
+- **Link "more info" cards** — give any link an optional description written in a
+  small, safe Markdown subset (bold, italic, lists, rules, inline code). On a
+  hover-capable device the button reveals a card with the icon at double size,
+  the title, the description, and a **GO** button; touch devices keep plain
+  tap-to-open.
 - **Drag to reorder** links, with Move up/down buttons for keyboard and no-JS use.
 - **One-click backup & restore** — download the whole profile (content, theme,
   identity, and images) as a `.tar.gz`, and restore it later.
@@ -161,7 +166,7 @@ The panel covers:
 | **Preview** | Generate a 1200×630 social preview card (name, tagline, avatar on the accent colour) shown when your page is shared, or upload your own |
 | **Favicon** | Upload a browser-tab icon (centre-cropped to a 512×512 PNG in your browser) |
 | **Background** | Per-theme background image with opacity, a solid colour behind it, and size/position/tiling/scroll options |
-| **Links** | Add, edit, delete, and drag-to-reorder your link buttons |
+| **Links** | Add, edit, delete, and drag-to-reorder your link buttons, with an optional "more info" description shown in a hover card |
 | **Backup & restore** | Download or restore the whole profile as a `.tar.gz` |
 | **Security** | Change your admin password (signs out other sessions) |
 

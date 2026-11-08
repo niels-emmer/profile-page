@@ -8,6 +8,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Link "more info" descriptions**: every link has an optional description,
+  edited in a textarea in the link editor and stored with the link. Existing
+  databases gain the column automatically on startup (an idempotent `ALTER
+  TABLE` guarded by `PRAGMA table_info`), so old links simply read back with an
+  empty description.
+- **Safe Markdown rendering**: descriptions support a small, dependency-free
+  subset — paragraphs, line breaks, **bold**, *italic*, `---` rules, bullet and
+  numbered lists, and inline code. There are no links, images, headings, or raw
+  HTML; all text is escaped before formatting, so hostile input renders as inert
+  literal text.
+- **Front-page hover cards**: on hover-capable devices each link reveals a card
+  with its icon at double size, title, rendered description, and a `GO` button
+  that opens the same URL. It is keyboard-reachable via focus, causes no layout
+  shift, and is skipped on touch devices so taps keep navigating normally. The
+  description also appears in `contact.json` and `llms.txt`.
 - **Site-verification files**: drop a Google/Bing/Yandex ownership file into
   `DATA_DIR/root/` and it is served at the site root (e.g.
   `/googledbb15ec766251fa6.html`). The directory is under the gitignored

@@ -223,3 +223,45 @@ other output; the public email/phone are opt-in and clearly labelled as public.
 On-page markup alone does not create authority — external corroboration
 (reciprocal `rel="me"`/backlinks from authoritative profiles) still does — but the
 page now presents a machine-unambiguous anchor.
+
+---
+
+## ADR-015: Safe markdown subset for link descriptions and a CSS hover card
+
+**Context.** A link button holds one short label, but people often want to say
+more about a link without turning the page into an article. Rendering owner-typed
+markdown is a classic XSS foot-gun: a renderer that emits links, images, or raw
+HTML hands an attacker the page. Adding a markdown library would also break the
+two-dependency budget (ADR-001).
+
+**Decision.** Store one optional `description` per link and render it with a
+hand-written, dependency-free subset (`src/markdown.ts`): paragraphs, line
+breaks, `**bold**`, `*italic*`/`_italic_`, `---`/`***` rules, `-`/`*` and `1.`
+lists, and inline code. There are **no** links, images, headings, code fences, or
+raw HTML, and the renderer never emits an attribute or a URL. All input is
+HTML-escaped *before* any formatting tag is added, so only fixed tags can appear
+in the output. Length is capped at 2000 characters upstream, and the patterns
+are bounded to avoid pathological backtracking.
+
+The description is persisted in a new `links.description` column. Because
+`CREATE TABLE IF NOT EXISTS` cannot alter an existing table (ADR-003), startup
+runs an idempotent `PRAGMA table_info(links)` check and adds the column only
+when it is missing — an additive migration, not a breaking reset.
+
+On the public page each link is wrapped in a positioned `.link-item` holding the
+existing anchor and a **sibling** card (never a nested anchor) with the icon at
+double size, the title, the rendered description, and a real `GO` anchor that
+reuses the link's URL, target, and rel attributes. The card is an absolute
+overlay revealed by `:hover` / `:focus-within` inside `@media (hover: hover)`
+only, so touch devices never get a stuck card and tapping still navigates. It
+uses the page's `--fg`/`--accent` variables plus neutral translucent surfaces, so
+no new tokens are needed; the overlay causes no layout shift, and `height`/
+`width` caps keep long descriptions and small viewports usable.
+
+**Consequences.** Descriptions look formatted without any new dependency, and
+the escape-then-format order means no user text can reach an HTML attribute or
+URL context. The subset is intentionally narrower than CommonMark (no nested
+emphasis, no links); unsupported syntax shows as literal text, which is the safe
+failure mode. `contact.json` carries the description as plain text and
+`llms.txt` collapses it to one line. Existing databases migrate automatically
+and existing links read back with an empty description.
