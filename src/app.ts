@@ -52,6 +52,8 @@ import {
 import type { BackgroundSettings, NewLink, ThemeSettings } from './types.ts';
 import { MAX_BACKGROUND_BYTES, UploadError, deleteUpload, saveImage } from './upload.ts';
 import {
+  MAX_LINK_DESCRIPTION,
+  cleanMultiline,
   cleanText,
   isBackgroundAttachment,
   isBackgroundPosition,
@@ -271,6 +273,7 @@ export function createApp(deps: AppDeps): Hono {
     return {
       text: formField(body, 'text').trim(),
       url: formField(body, 'url').trim(),
+      description: cleanMultiline(formField(body, 'description'), MAX_LINK_DESCRIPTION),
       newWindow: formField(body, 'newWindow') === 'on',
       iconType: formField(body, 'iconType') === 'image' ? 'image' : 'fa',
       iconValue: formField(body, 'iconValue').trim(),

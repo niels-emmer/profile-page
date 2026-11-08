@@ -475,6 +475,12 @@ function field(label: string, name: string, value: string, type = 'text'): strin
     </label>`;
 }
 
+function textareaField(label: string, name: string, value: string, rows = 3): string {
+  return `<label class="admin-field">${escapeHtml(label)}
+      <textarea name="${name}" rows="${rows}">${escapeHtml(value)}</textarea>
+    </label>`;
+}
+
 function colorField(label: string, name: string, value: string): string {
   return `<label class="admin-field admin-field--color">${escapeHtml(label)}
       <input type="color" name="${name}" value="${escapeHtml(value)}">
@@ -757,6 +763,7 @@ function renderLinkEditor(link: Link, index: number, links: Link[], csrfToken: s
       ${field('URL', 'url', link.url, 'url')}
     </div>
     <label class="admin-check"><input type="checkbox" name="newWindow"${link.newWindow ? ' checked' : ''}> Open in new window</label>
+    ${textareaField('More info (optional)', 'description', link.description)}
     ${iconFields(link.iconType, link.iconValue, link.iconColor)}
     <div class="admin-grid">
       ${colorField('Text colour', 'textColor', link.textColor)}
@@ -943,6 +950,7 @@ export function renderAdminPage(ctx: AdminContext): string {
         ${field('URL', 'url', '', 'url')}
       </div>
       <label class="admin-check"><input type="checkbox" name="newWindow" checked> Open in new window</label>
+      ${textareaField('More info (optional)', 'description', '')}
       ${iconFields('fa', '', null)}
       <div class="admin-grid">
         ${colorField('Text colour', 'textColor', '#ffffff')}

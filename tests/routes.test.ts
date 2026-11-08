@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import { gunzipSync, gzipSync } from 'node:zlib';
-import { deleteLink, ensureSeeded, getAuth, getEntity, getProfile, getTheme, listLinks } from '../src/db.ts';
+import { deleteLink, ensureSeeded, getAuth, getEntity, getProfile, getTheme, listLinks, openDatabase } from '../src/db.ts';
 import { ensureAuth, isDefaultPassword, verifyPassword } from '../src/auth.ts';
+import { loadConfig } from '../src/config.ts';
 import { createTar, readTar } from '../src/tar.ts';
 import { MAX_UPLOAD_BYTES } from '../src/upload.ts';
 import { FORM_HEADERS, cookieHeader, cookiesFrom, formBody, login, makeTestApp } from './helpers.ts';
@@ -419,8 +422,86 @@ test('admin can add, edit, reorder, and delete links', async (t) => {
   assert.equal(listLinks(ctx.db).length, 1);
 });
 
-test('admin rejects non-http(s) link URLs', async (t) => {
+test('openDatabase adds the description column to an older links table', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pp-migrate-'));
+  try {
+    const config = loadConfig({ DATA_DIR: dir, ADMIN_PASSWORD: 'x' });
+
+    // A database created before link descriptions existed.
+    const old = new DatabaseSync(config.dbPath);
+    old.exec(
+      `CREATE TABLE links (
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         position INTEGER NOT NULL DEFAULT 0,
+         text TEXT NOT NULL DEFAULT '',
+         url TEXT NOT NULL DEFAULT '',
+         new_window INTEGER NOT NULL DEFAULT 1,
+         icon_type TEXT NOT NULL DEFAULT 'fa',
+         icon_value TEXT NOT NULL DEFAULT '',
+         icon_color TEXT,
+         text_color TEXT NOT NULL DEFAULT '#ffffff',
+         color_mode TEXT NOT NULL DEFAULT 'solid',
+         color_from TEXT NOT NULL DEFAULT '#0085ff',
+         color_to TEXT NOT NULL DEFAULT '#0085ff',
+         border_color TEXT
+       )`,
+    );
+    old.exec("INSERT INTO links (text, url) VALUES ('Old', 'https://old.example')");
+    old.close();
+
+    const db = openDatabase(config);
+    assert.equal(listLinks(db)[0]?.description, '');
+    db.close();
+
+    // A second open must not try to add the column again.
+    const again = openDatabase(config);
+    assert.equal(listLinks(again)[0]?.description, '');
+    again.close();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('admin can save a link description and update it later', async (t) => {
   const ctx = makeTestApp({ seed: false });
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS };
+
+  const create = await ctx.app.request('/admin/links', {
+    method: 'POST',
+    headers,
+    body: formBody({
+      csrf,
+      text: 'Docs',
+      url: 'https://docs.example',
+      description: '**Bold**\r\n- one',
+      iconType: 'fa',
+      iconValue: 'fa-link',
+    }),
+  });
+  assert.equal(create.status, 302);
+  const [link] = listLinks(ctx.db);
+  assert.equal(link?.description, '**Bold**\n- one');
+
+  const update = await ctx.app.request('/admin/links', {
+    method: 'POST',
+    headers,
+    body: formBody({
+      csrf,
+      id: String(link?.id),
+      text: 'Docs',
+      url: 'https://docs.example',
+      description: 'Changed',
+      iconType: 'fa',
+      iconValue: 'fa-link',
+    }),
+  });
+  assert.equal(update.status, 302);
+  assert.equal(listLinks(ctx.db)[0]?.description, 'Changed');
+});
+
+test('admin rejects non-http(s) link URLs', async (t) => {  const ctx = makeTestApp({ seed: false });
   t.after(() => ctx.cleanup());
   const { csrf, session } = await login(ctx.app);
   const res = await ctx.app.request('/admin/links', {
@@ -1118,6 +1199,7 @@ test('POST /admin/restore applies a backup and rejects an invalid one', async (t
       {
         text: 'Restored Link',
         url: 'https://restored.example',
+        description: '',
         newWindow: true,
         iconType: 'fa',
         iconValue: 'fa-link',

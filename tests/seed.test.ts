@@ -7,6 +7,7 @@ import { loadConfig } from '../src/config.ts';
 import { getEntity, getProfile, getTheme, listLinks, openDatabase } from '../src/db.ts';
 import { applySeed, parseSeed, validateSeed } from '../src/seed-file.ts';
 import type { SeedFile } from '../src/types.ts';
+import { MAX_LINK_DESCRIPTION } from '../src/validate.ts';
 
 const seed: SeedFile = {
   profile: {
@@ -57,6 +58,7 @@ const seed: SeedFile = {
     {
       text: 'One',
       url: 'https://one.example',
+      description: 'More about one.',
       newWindow: true,
       iconType: 'fa',
       iconValue: 'fa-link',
@@ -70,6 +72,7 @@ const seed: SeedFile = {
     {
       text: 'Two',
       url: 'https://two.example',
+      description: '',
       newWindow: false,
       iconType: 'image',
       iconValue: '/assets/uploads/icon.svg',
@@ -206,5 +209,63 @@ test('validateSeed rejects an invalid contact email or phone', () => {
   );
   assert.throws(() =>
     validateSeed({ ...seed, entity: { ...seed.entity, telephone: 'call me maybe' } }),
+  );
+});
+
+test('parseSeed defaults a missing link description to empty and normalises text', () => {
+  const base = seed.links[0]!;
+  const parsed = parseSeed({
+    profile: seed.profile,
+    theme: seed.theme,
+    links: [
+      { ...base, description: 'line one\r\nline two' },
+      {
+        text: base.text,
+        url: base.url,
+        newWindow: base.newWindow,
+        iconType: base.iconType,
+        iconValue: base.iconValue,
+        iconColor: base.iconColor,
+        textColor: base.textColor,
+        colorMode: base.colorMode,
+        colorFrom: base.colorFrom,
+        colorTo: base.colorTo,
+        borderColor: base.borderColor,
+      },
+    ],
+  });
+  assert.equal(parsed.links[0]?.description, 'line one\nline two');
+  assert.equal(parsed.links[1]?.description, '');
+});
+
+test('parseSeed rejects a non-string link description', () => {
+  assert.throws(
+    () =>
+      parseSeed({
+        profile: seed.profile,
+        theme: seed.theme,
+        links: [{ ...seed.links[0]!, description: 42 }],
+      }),
+    /description/,
+  );
+});
+
+test('parseSeed caps an over-long link description', () => {
+  const parsed = parseSeed({
+    profile: seed.profile,
+    theme: seed.theme,
+    links: [{ ...seed.links[0]!, description: 'x'.repeat(MAX_LINK_DESCRIPTION + 500) }],
+  });
+  assert.equal(parsed.links[0]?.description.length, MAX_LINK_DESCRIPTION);
+});
+
+test('validateSeed rejects an over-long link description', () => {
+  assert.throws(
+    () =>
+      validateSeed({
+        ...seed,
+        links: [{ ...seed.links[0]!, description: 'x'.repeat(MAX_LINK_DESCRIPTION + 1) }],
+      }),
+    /too long/,
   );
 });

@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS links (
   position    INTEGER NOT NULL DEFAULT 0,
   text        TEXT NOT NULL DEFAULT '',
   url         TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
   new_window  INTEGER NOT NULL DEFAULT 1,
   icon_type   TEXT NOT NULL DEFAULT 'fa',
   icon_value  TEXT NOT NULL DEFAULT '',
@@ -59,7 +60,24 @@ export function openDatabase(config: Config): DatabaseSync {
   db.exec('PRAGMA journal_mode = WAL;');
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
+  migrateSchema(db);
   return db;
+}
+
+/**
+ * Add columns introduced after a database was first created.
+ *
+ * `CREATE TABLE IF NOT EXISTS` never alters an existing table, so an older
+ * database needs an explicit `ALTER TABLE`. Checking `PRAGMA table_info` first
+ * makes the migration idempotent and safe to run on every boot.
+ */
+function migrateSchema(db: DatabaseSync): void {
+  const columns = db.prepare('PRAGMA table_info(links)').all() as unknown as Array<{
+    name: string;
+  }>;
+  if (!columns.some((column) => column.name === 'description')) {
+    db.exec("ALTER TABLE links ADD COLUMN description TEXT NOT NULL DEFAULT ''");
+  }
 }
 
 /* ------------------------------- profile ------------------------------- */
@@ -112,6 +130,7 @@ interface LinkRow {
   position: number;
   text: string;
   url: string;
+  description: string;
   new_window: number;
   icon_type: string;
   icon_value: string;
@@ -129,6 +148,7 @@ function toLink(row: LinkRow): Link {
     position: row.position,
     text: row.text,
     url: row.url,
+    description: row.description,
     newWindow: row.new_window === 1,
     iconType: row.icon_type === 'image' ? 'image' : 'fa',
     iconValue: row.icon_value,
@@ -160,14 +180,15 @@ export function createLink(db: DatabaseSync, link: NewLink): number {
   const result = db
     .prepare(
       `INSERT INTO links
-         (position, text, url, new_window, icon_type, icon_value, icon_color,
+         (position, text, url, description, new_window, icon_type, icon_value, icon_color,
           text_color, color_mode, color_from, color_to, border_color)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       next.pos,
       link.text,
       link.url,
+      link.description,
       link.newWindow ? 1 : 0,
       link.iconType,
       link.iconValue,
@@ -184,13 +205,14 @@ export function createLink(db: DatabaseSync, link: NewLink): number {
 export function updateLink(db: DatabaseSync, id: number, link: NewLink): void {
   db.prepare(
     `UPDATE links SET
-       text = ?, url = ?, new_window = ?, icon_type = ?, icon_value = ?,
+       text = ?, url = ?, description = ?, new_window = ?, icon_type = ?, icon_value = ?,
        icon_color = ?, text_color = ?, color_mode = ?, color_from = ?, color_to = ?,
        border_color = ?, updated_at = datetime('now')
      WHERE id = ?`,
   ).run(
     link.text,
     link.url,
+    link.description,
     link.newWindow ? 1 : 0,
     link.iconType,
     link.iconValue,

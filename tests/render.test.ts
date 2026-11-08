@@ -51,6 +51,7 @@ const link: Link = {
   position: 0,
   text: 'GitHub',
   url: 'https://github.com/example',
+  description: '',
   newWindow: true,
   iconType: 'fa',
   iconValue: 'fa-brands fa-github',
@@ -418,8 +419,25 @@ test('renderAdminPage includes every form and the saved banner', () => {
   assert.match(html, /GitHub/);
 });
 
-test('renderAdminPage includes the identity section', () => {
+test('renderAdminPage renders the link description as an escaped textarea', () => {
   const html = renderAdminPage({
+    profile,
+    links: [{ ...link, description: '**A** & <b>' }],
+    theme,
+    csrfToken: 'token-123',
+    saved: false,
+    passwordManagedByEnv: false,
+  });
+  assert.match(html, /More info \(optional\)/);
+  assert.match(
+    html,
+    /<textarea name="description" rows="3">\*\*A\*\* &amp; &lt;b&gt;<\/textarea>/,
+  );
+  // Profile description + link editor + add-link form.
+  assert.equal(html.match(/name="description"/g)?.length, 3);
+});
+
+test('renderAdminPage includes the identity section', () => {  const html = renderAdminPage({
     profile,
     links: [link],
     theme,

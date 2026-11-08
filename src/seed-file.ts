@@ -10,6 +10,8 @@ import type {
   ThemeSettings,
 } from './types.ts';
 import {
+  MAX_LINK_DESCRIPTION,
+  cleanMultiline,
   cleanText,
   isBackgroundAttachment,
   isBackgroundPosition,
@@ -94,7 +96,22 @@ export function parseSeed(raw: unknown): SeedFile {
     profile: profile as Profile,
     theme: normalizeTheme(theme),
     entity: normalizeEntity(obj['entity']),
-    links: links as NewLink[],
+    links: links.map(normalizeLink),
+  };
+}
+
+/**
+ * Fill in a link's optional description for older seeds. A missing value
+ * becomes empty; a non-string is rejected rather than coerced.
+ */
+function normalizeLink(raw: unknown): NewLink {
+  const description = asObject(raw)['description'];
+  if (description !== undefined && typeof description !== 'string') {
+    throw new Error('Link "description" must be a string');
+  }
+  return {
+    ...(raw as NewLink),
+    description: cleanMultiline(description ?? '', MAX_LINK_DESCRIPTION),
   };
 }
 
@@ -147,6 +164,9 @@ export function validateSeed(seed: SeedFile): void {
     }
     if (link.iconType === 'image' && !isSafeAssetRef(link.iconValue)) {
       throw new Error(`Invalid icon image path: ${link.iconValue}`);
+    }
+    if (link.description.length > MAX_LINK_DESCRIPTION) {
+      throw new Error('Link description is too long');
     }
   }
   if (seed.entity.email.length > 0 && !isEmail(seed.entity.email)) {
