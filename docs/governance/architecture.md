@@ -124,8 +124,8 @@ passes through `escapeHtml`; every CSS value through `sanitizeCss`.
 
 - **`renderProfilePage`** — the public page: profile, links (each with a
   hover/focus "more info" card whose `Open:` footer shows the link's short link
-  when one is active; touch devices get a small ⓘ trigger that opens the same
-  card as a fixed bottom sheet), discovery meta
+  when one is active; touch devices get a small asterisk trigger in the
+  top-right corner that opens the same card as a fixed bottom sheet), discovery meta
   (`canonical`, `theme-color`, schema.org `Person` JSON-LD, `rel="me"`,
   `rel="alternate"`), a per-request `<style>` block for the theme, the
   avatar-triggered QR modal (an inline SVG built by `qr.ts`), and the visitor

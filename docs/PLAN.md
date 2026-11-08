@@ -178,7 +178,9 @@ Per-link shareable slugs (not in the original plan):
 
 Mobile access to the hover card:
 
-- A touch-only `.link-more-trigger` (ⓘ) sits beside each link; it targets
+- A touch-only `.link-more-trigger` (`*`) sits in each link's top-right corner;
+  its transparent `::after` keeps a ~44px tap target while the visible dot stays
+  small. It targets
   `#link-more-<id>` and CSS `:target` opens the same card as a fixed bottom
   sheet. The link itself still navigates.
 - `.link-more-backdrop` and `.link-more-close` clear the fragment; the sheet has

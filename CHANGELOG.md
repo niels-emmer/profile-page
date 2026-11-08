@@ -29,11 +29,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   focus, causes no layout shift, and is skipped on touch devices so taps keep
   navigating normally. The description also appears in `contact.json` and
   `llms.txt`.
-- **Touch link details**: on touch devices, a small **ⓘ** button beside each
-  link opens its details card as a bottom sheet with a full-width **Open**
-  action. Tapping the link itself still opens it; the desktop hover card is
-  unchanged. The sheet reuses the QR modal's CSS `:target` pattern (works
-  without JavaScript) with a small script for focus handling and Escape.
+- **Touch link details**: on touch devices, a small **\*** button in each
+  link's top-right corner opens its details card as a bottom sheet with a
+  full-width **Open** action. Tapping the link itself still opens it; the
+  desktop hover card is unchanged. The sheet reuses the QR modal's CSS
+  `:target` pattern (works without JavaScript) with a small script for focus
+  handling and Escape.
 - **Short links**: every link can carry an optional slug (for example
   `your-domain.com/matrix`) that redirects to its real target. The field lives
   in the link editor, normalises to lowercase, and is checked on blur and again

@@ -177,7 +177,7 @@ function renderLink(link: Link, index: number, baseUrl: string): string {
     `<div class="button-entrance">` +
     `<span class="link-button-wrap">` +
     `<a class="button button-hover icon-hover" style="color: ${sanitizeCss(link.textColor)}; background-image: ${background};${border}" ${href}>${linkIcon(link)}${escapeHtml(link.text)}</a>` +
-    `<a class="link-more-trigger" href="#${cardId}" style="color: ${sanitizeCss(link.textColor)}" aria-label="${escapeHtml(detailsLabel)}"><i class="fa-solid fa-info" aria-hidden="true"></i></a>` +
+    `<a class="link-more-trigger" href="#${cardId}" style="color: ${sanitizeCss(link.textColor)}" aria-label="${escapeHtml(detailsLabel)}"><span aria-hidden="true">*</span></a>` +
     `</span>` +
     `</div>` +
     `<div class="link-hover-card" id="${cardId}" role="dialog" aria-label="${escapeHtml(detailsLabel)}" tabindex="-1">` +

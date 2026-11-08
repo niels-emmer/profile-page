@@ -258,7 +258,7 @@ double size, the title, the rendered description, and a footer with plain
 `Open:` text followed by a real anchor for the URL (without its scheme) that
 reuses the link's URL, target, and rel attributes. The card is an absolute overlay revealed by `:hover` /
 `:focus-within` inside `@media (hover: hover)` only. ADR-017 adds a touch-only
-info trigger and bottom sheet; tapping the link itself still navigates. To keep the card reachable it appears
+asterisk trigger and bottom sheet; tapping the link itself still navigates. To keep the card reachable it appears
 after a 0.6 s hover delay, lingers 0.8 s after the pointer leaves, and a
 transparent bridge spans the gap between the button and the card. The hovered
 row raises its `z-index`, so the card is never painted under the next button. It
@@ -312,7 +312,7 @@ restore cannot introduce an invalid short link.
 
 ---
 
-## ADR-017: Touch access to link details via an info trigger and bottom sheet
+## ADR-017: Touch access to link details via an asterisk trigger and bottom sheet
 
 **Context.** ADR-015's link details card is revealed by hover or keyboard focus
 and is deliberately hidden on touch devices, where the button keeps navigating.
@@ -321,7 +321,8 @@ obvious analogue — conflicts with the OS link preview/context menu on iOS and
 Android, is undiscoverable, and is hard to make accessible. A first tap that only
 reveals details also breaks the expected tap-to-open behaviour of a link.
 
-**Decision.** Render a small ⓘ trigger beside each link, shown only under
+**Decision.** Render a small asterisk (`*`) trigger in each link's top-right
+corner, shown only under
 `@media (hover: none)`. The trigger is a sibling of the button (never nested
 inside the anchor), so tapping the link still navigates. It links to
 `#link-more-<id>`; CSS `:target` turns the existing details card into a fixed
