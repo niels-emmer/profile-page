@@ -37,9 +37,13 @@ network, with no published ports. It does not implement TLS itself.
 - **SQL** — every query is parameterised (`?` placeholders). No string-built SQL.
 - **HTML** — all interpolated values pass through `escapeHtml`.
 - **CSS** — admin-supplied colour/gradient values pass through `sanitizeCss`,
-  which strips everything outside `[a-zA-Z0-9#(),.%\s/-]`. This blocks
-  `</style>` breakout and `url(...)` payloads. Local background shorthands such as
-  `url(/assets/uploads/bg.jpg) center/cover no-repeat fixed` are preserved.
+  which strips everything outside `[a-zA-Z0-9#(),.%\s/-]`. Removing `<`, `>`,
+  `;`, `:`, quotes, and braces blocks `</style>` breakout and declaration
+  injection. `url(...)` is deliberately preserved so the renderer can emit local
+  background shorthands such as `url(/assets/uploads/bg.jpg) center/cover
+  no-repeat fixed`; `default-src 'self'` blocks any external fetch, and the
+  values are owner-controlled. Colour fields from `<input type="color">` are
+  additionally checked with `isHexColor` before they are stored.
 - **URLs** — link URLs must parse as `http:` or `https:` and may not contain
   control characters (CR/LF are stripped by `new URL()`, so they are rejected on
   the raw value). `faviconPath` and image-type `iconValue` must be a local
@@ -117,10 +121,12 @@ These are known and deliberate for a single-user personal page:
   fresh install should not be exposed to the internet before the first login.
   Forgot the password later? `docker exec -it profile-page node
   src/reset-password.ts` then restart.
-- **Request bodies are buffered before validation.** `/admin/avatar` and
-  `/admin/favicon` are gated by auth first, then a 6 MB `bodyLimit`;
-  `/admin/background` has a 9 MB `bodyLimit`; `/login` has a 16 KB `bodyLimit` and
-  is additionally rate-limited.
+- **Request bodies are buffered before validation.** Every state-changing POST is
+  size-capped before its body is read: text forms (`/admin/profile`,
+  `/admin/theme`, `/admin/identity`, `/admin/links`, reorder/delete/remove
+  routes, and the password routes) at 64 KB, `/login` at 16 KB (and rate-limited),
+  image uploads at 6 MB, backgrounds at 9 MB, and backup restore at 51 MB. The
+  large caps apply only to authenticated routes.
 - **No account lockout beyond the IP rate limit.** A distributed attacker with
   many source IPs is not throttled.
 - **No audit log.** Single-user app; changes are not recorded.

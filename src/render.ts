@@ -30,7 +30,10 @@ export { escapeHtml };
 
 /**
  * Allow only characters that can appear in a CSS colour or gradient value.
- * Blocks `</style>` injection and `url(...)` payloads from admin-supplied data.
+ * Removing `<`, `>`, `;`, `:`, quotes, and braces blocks `</style>` breakout and
+ * declaration injection. `url(...)` is deliberately permitted so
+ * `backgroundValue` can emit local asset shorthands; the CSP keeps any fetch
+ * same-origin, and every stored theme value is owner-controlled.
  */
 export function sanitizeCss(value: string): string {
   return value.replace(/[^a-zA-Z0-9#(),.%\s/-]/g, '');

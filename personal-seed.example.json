@@ -18,14 +18,18 @@
       "size": "cover",
       "position": "center",
       "repeat": "no-repeat",
-      "attachment": "scroll"
+      "attachment": "scroll",
+      "color": null,
+      "opacity": 100
     },
     "backgroundImageLight": {
       "imagePath": null,
       "size": "cover",
       "position": "center",
       "repeat": "no-repeat",
-      "attachment": "scroll"
+      "attachment": "scroll",
+      "color": null,
+      "opacity": 100
     },
     "defaultMode": "system",
     "visitorToggle": false
