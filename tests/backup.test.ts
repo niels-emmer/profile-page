@@ -97,6 +97,7 @@ test('restoreBackup replaces content and images', () => {
     assert.equal(getProfile(target.db).name, 'Restored');
     assert.equal(getTheme(target.db).accentColor, '#123456');
     assert.equal(listLinks(target.db).length, 1);
+    assert.equal(listLinks(target.db)[0]?.description, 'More about one.');
     assert.deepEqual(readdirSync(target.config.uploadsDir), ['avatar.png']);
   } finally {
     dispose(source);

@@ -124,10 +124,11 @@ Variables set per request in a `<style>` block emitted by `render.ts`:
   a sibling overlay card: the icon at 2.5rem, the title, the rendered "more info"
   description, and a `GO` CTA. It appears on hover and keyboard focus only under
   `@media (hover: hover)`, so touch devices keep plain tap-to-open. The overlay is
-  absolutely positioned (no layout shift); the card uses neutral translucent
-  surfaces plus `--fg`/`--accent`, caps its width to the viewport and its
-  description height, and `:has()` raises the hovered row above the next button.
-  Long descriptions scroll inside the card; reduced-motion drops the transition.
+  absolutely positioned (no layout shift); the card uses an opaque theme-following
+  surface plus `--fg`/`--accent`, caps its width to the viewport and its
+  description height, and raises the hovered row's `z-index` above the next
+  button. Long descriptions scroll inside the card; reduced-motion drops the
+  transition.
 - **Entrance animations** — `.button-entrance` (`popUp`, staggered via `--delay`)
   and `.fadein`. Both are disabled under `prefers-reduced-motion: reduce`.
 - **Theme switcher** — when the owner enables visitor selection, a single

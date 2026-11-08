@@ -415,17 +415,17 @@ button {
 
 /* ------------------------------ link hover card ------------------------ */
 
-/* Each link is a positioned wrapper holding the button and an overlay card, so
-   the card can appear without shifting the layout. The card is a sibling of the
-   anchor — never nested — and is only revealed on devices that can hover, so a
-   touch device never leaves a card stuck on screen after a tap. */
+/* Each link row is a positioned wrapper holding the button and an overlay card,
+   so the card can appear without shifting the layout. The card is a sibling of
+   the anchor — never nested — and is only revealed on devices that can hover, so
+   a touch device never leaves a card stuck on screen after a tap. */
 .link-item {
   position: relative;
 }
 
 .link-card {
   position: absolute;
-  top: calc(100% + 0.5rem);
+  bottom: calc(100% + 0.5rem);
   left: 50%;
   z-index: 10;
   display: flex;
@@ -436,18 +436,30 @@ button {
   max-width: min(20rem, calc(100vw - 2rem));
   padding: 0.9rem 1rem;
   box-sizing: border-box;
-  border: 1px solid rgba(127, 127, 127, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 12px;
-  background: rgba(127, 127, 127, 0.14);
+  background: #ffffff;
   color: var(--fg);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
   text-align: center;
   opacity: 0;
   visibility: hidden;
-  transform: translate(-50%, -0.35rem);
+  transform: translate(-50%, 0.35rem);
   transition: opacity 0.15s, transform 0.15s, visibility 0.15s;
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+}
+
+/* The card surface follows the page theme, like the QR modal panel. */
+:root[data-theme='dark'] .link-card {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #151826;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .link-card {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: #151826;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  }
 }
 
 .link-card-head {
@@ -458,11 +470,14 @@ button {
   max-width: 100%;
 }
 
-/* The same icon at double size; the .icon size/padding is overridden here. */
+/* The same icon at double size; font-size enlarges Font Awesome glyphs and
+   width/height enlarge image icons. */
 .link-card-icon {
   width: 2.5rem;
   height: 2.5rem;
   padding: 0;
+  font-size: 2.5rem;
+  line-height: 1;
   flex: none;
 }
 
@@ -533,9 +548,8 @@ button {
 @media (hover: hover) {
   /* Raise the hovered row above later siblings so its card is never painted
      underneath the next button. */
-  .button-entrance:has(.link-item:hover),
-  .button-entrance:has(.link-item:focus-within) {
-    position: relative;
+  .link-item:hover,
+  .link-item:focus-within {
     z-index: 30;
   }
 

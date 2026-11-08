@@ -162,7 +162,7 @@ test('renderProfilePage renders a hover card with icon, title, description, and 
     theme,
     baseUrl: 'https://example.com',
   });
-  assert.match(html, /<div class="link-item">/);
+  assert.match(html, /class="button-entrance link-item"/);
   assert.match(html, /<div class="link-card">/);
   assert.match(html, /class="icon hvr-icon link-card-icon fa-brands fa-github"/);
   assert.match(html, /<span class="link-card-title">GitHub<\/span>/);
