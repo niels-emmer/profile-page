@@ -511,6 +511,13 @@ test('renderAdminPage renders the link description as an escaped textarea', () =
   assert.equal(html.match(/name="description"/g)?.length, 3);
 });
 
+test('the hover-card image icon plate is opaque for white brand marks', () => {
+  const css = readFileSync(new URL('../public/css/style.css', import.meta.url), 'utf8');
+  // A translucent wash leaves white Simple Icons invisible on the white card;
+  // the plate must be an opaque mid-tone.
+  assert.match(css, /img\.link-hover-icon\s*\{[^}]*background:\s*#7f7f7f/);
+});
+
 test('renderAdminPage keeps the link editor cards visible (admin .link-card)', () => {
   const html = renderAdminPage({
     profile,
