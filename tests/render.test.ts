@@ -155,6 +155,46 @@ test('renderProfilePage renders image and font-awesome icons', () => {
   assert.match(html, /class="icon hvr-icon fa-brands fa-github"/);
 });
 
+test('renderProfilePage renders a hover card with icon, title, description, and GO', () => {
+  const html = renderProfilePage({
+    profile,
+    links: [{ ...link, description: '**Bold** note' }],
+    theme,
+    baseUrl: 'https://example.com',
+  });
+  assert.match(html, /<div class="link-item">/);
+  assert.match(html, /<div class="link-card">/);
+  assert.match(html, /class="icon hvr-icon link-card-icon fa-brands fa-github"/);
+  assert.match(html, /<span class="link-card-title">GitHub<\/span>/);
+  assert.match(
+    html,
+    /<div class="link-card-description"><p><strong>Bold<\/strong> note<\/p><\/div>/,
+  );
+  assert.match(
+    html,
+    /<a class="link-card-go" rel="noopener noreferrer nofollow noindex" href="https:\/\/github\.com\/example" target="_blank">GO<\/a>/,
+  );
+});
+
+test('renderProfilePage keeps the card but omits an empty description', () => {
+  const html = renderProfilePage({ profile, links: [link], theme, baseUrl: 'https://example.com' });
+  assert.match(html, /<div class="link-card">/);
+  assert.doesNotMatch(html, /link-card-description/);
+  assert.match(html, />GO<\/a>/);
+});
+
+test('renderProfilePage escapes hostile link descriptions', () => {
+  const html = renderProfilePage({
+    profile,
+    links: [{ ...link, description: '<script>alert(1)</script> [x](javascript:alert(1))' }],
+    theme,
+    baseUrl: 'https://example.com',
+  });
+  assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
+  assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.match(html, /\[x\]\(javascript:alert\(1\)\)/);
+});
+
 test('imageMime maps the file extension to a MIME type', () => {
   assert.equal(imageMime('/assets/favicon.png'), 'image/png');
   assert.equal(imageMime('/assets/uploads/x.jpg'), 'image/jpeg');
@@ -358,8 +398,16 @@ test('renderLlmsTxt escapes markdown-breaking characters', () => {
   assert.match(txt, /- \[Badx link\]\(https:\/\/github\.com\/example\)/);
 });
 
-test('renderLlmsTxt publishes identity facts and machine endpoints', () => {
-  const txt = renderLlmsTxt(profile, [link], 'https://example.com', {
+test('renderLlmsTxt includes a collapsed link description', () => {
+  const txt = renderLlmsTxt(
+    profile,
+    [{ ...link, description: 'Two\nlines **bold**' }],
+    'https://example.com',
+  );
+  assert.match(txt, /- \[GitHub\]\(https:\/\/github\.com\/example\) — Two lines \*\*bold\*\*/);
+});
+
+test('renderLlmsTxt publishes identity facts and machine endpoints', () => {  const txt = renderLlmsTxt(profile, [link], 'https://example.com', {
     alternateName: 'Zaph',
     jobTitle: 'Cloud Architect',
     worksFor: 'Rockstars',

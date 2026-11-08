@@ -1,6 +1,7 @@
 import { COLOR_SCHEMES, readableTextColor } from './colors.ts';
 import { DEFAULT_ENTITY } from './defaults.ts';
 import { escapeHtml } from './html.ts';
+import { renderMarkdown } from './markdown.ts';
 import { QR_QUIET_ZONE, qrMatrix, qrPathData } from './qr.ts';
 import type {
   BackgroundPosition,
@@ -127,22 +128,42 @@ export interface PageContext {
   baseUrl: string;
 }
 
+/** The link's icon: a Font Awesome glyph or an uploaded image. */
+function linkIcon(link: Link, extraClass = ''): string {
+  const classes = ['icon', 'hvr-icon', extraClass].filter((name) => name.length > 0).join(' ');
+  if (link.iconType === 'image') {
+    return `<img alt="" class="${classes}" src="${escapeHtml(link.iconValue)}">`;
+  }
+  const color =
+    link.iconColor !== null ? ` style="color: ${sanitizeCss(link.iconColor)}"` : '';
+  return `<i class="${classes} ${escapeHtml(link.iconValue)}"${color}></i>`;
+}
+
 function renderLink(link: Link, index: number): string {
   const from = sanitizeCss(link.colorFrom);
   const to = link.colorMode === 'gradient' ? sanitizeCss(link.colorTo) : from;
   const background = `linear-gradient(45deg, ${from} 0%, ${to} 100%)`;
   const border = link.borderColor !== null ? ` border: 1px solid ${sanitizeCss(link.borderColor)};` : '';
-  const icon =
-    link.iconType === 'image'
-      ? `<img alt="" class="icon hvr-icon" src="${escapeHtml(link.iconValue)}">`
-      : `<i class="icon hvr-icon ${escapeHtml(link.iconValue)}"${
-          link.iconColor !== null ? ` style="color: ${sanitizeCss(link.iconColor)}"` : ''
-        }></i>`;
   const target = link.newWindow ? ' target="_blank"' : '';
+  const href = `rel="noopener noreferrer nofollow noindex" href="${escapeHtml(link.url)}"${target}`;
+  // The hover card is a sibling of the anchor, never nested inside it. Its
+  // description is rendered by the dependency-free markdown subset, which
+  // escapes all text before adding formatting.
+  const description = renderMarkdown(link.description);
+  const descriptionMarkup =
+    description.length > 0
+      ? `<div class="link-card-description">${description}</div>`
+      : '';
   return (
     `<div style="--delay: ${index + 1}s" class="button-entrance">` +
-    `<a class="button button-hover icon-hover" style="color: ${sanitizeCss(link.textColor)}; background-image: ${background};${border}" ` +
-    `rel="noopener noreferrer nofollow noindex" href="${escapeHtml(link.url)}"${target}>${icon}${escapeHtml(link.text)}</a>` +
+    `<div class="link-item">` +
+    `<a class="button button-hover icon-hover" style="color: ${sanitizeCss(link.textColor)}; background-image: ${background};${border}" ${href}>${linkIcon(link)}${escapeHtml(link.text)}</a>` +
+    `<div class="link-card">` +
+    `<div class="link-card-head">${linkIcon(link, 'link-card-icon')}<span class="link-card-title">${escapeHtml(link.text)}</span></div>` +
+    descriptionMarkup +
+    `<a class="link-card-go" ${href}>GO</a>` +
+    `</div>` +
+    `</div>` +
     `</div>`
   );
 }
@@ -367,7 +388,11 @@ export function renderLlmsTxt(
   if (isTelephone(entity.telephone)) facts.push(`- Telephone: ${markdownInline(entity.telephone)}`);
 
   const linkLines = links
-    .map((link) => `- [${markdownInline(link.text)}](${link.url})`)
+    .map((link) => {
+      // Collapse the markdown description to one inert plain-text line.
+      const note = markdownInline(link.description);
+      return `- [${markdownInline(link.text)}](${link.url})${note.length > 0 ? ` — ${note}` : ''}`;
+    })
     .join('\n');
   return (
     `# ${markdownInline(profile.name)}\n\n` +

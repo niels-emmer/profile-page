@@ -141,12 +141,25 @@ test('renderContactJson summarises the profile', () => {
     url: string;
     avatar: string;
     vcard: string;
-    links: Array<{ text: string; url: string }>;
+    links: Array<{ text: string; url: string; description?: string }>;
   };
   assert.equal(data.name, 'Alex Rivera');
   assert.equal(data.url, 'https://example.com/');
   assert.equal(data.avatar, 'https://example.com/assets/uploads/avatar.jpg');
   assert.equal(data.vcard, 'https://example.com/contact.vcf');
+  assert.deepEqual(data.links, [
+    {
+      text: 'GitHub',
+      url: 'https://github.com/example',
+      description: 'A description with **bold**.',
+    },
+  ]);
+});
+
+test('renderContactJson omits an empty link description', () => {
+  const data = JSON.parse(
+    renderContactJson(profile, [{ ...link, description: '' }], 'https://example.com'),
+  ) as { links: Array<Record<string, unknown>> };
   assert.deepEqual(data.links, [{ text: 'GitHub', url: 'https://github.com/example' }]);
 });
 
