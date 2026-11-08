@@ -56,7 +56,9 @@ the repository.
   The homepage links it with `<link rel="alternate" type="text/vcard">` and a
   visible "Add to contacts" link.
 - **`/contact.json`** — `{ name, tagline, description, url, avatar, vcard,
-  sameAs[], links[], …identity }`.
+  sameAs[], links[], …identity }`. Each `links[]` entry is `{ text, url }` plus
+  an optional plain-text `description` when the link has "more info" text: the
+  Markdown source, never rendered HTML.
 - **Site-verification files** — a `.html`, `.htm`, `.xml`, or `.txt` file placed
   in `DATA_DIR/root/` is served at the site root (e.g. `/google….html`), for
   Google/Bing/Yandex ownership checks. The directory sits under the gitignored
