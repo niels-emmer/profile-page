@@ -54,8 +54,8 @@ footprint, and your data stays on your own disk.
 - **Link "more info" cards** — give any link an optional description written in a
   small, safe Markdown subset (bold, italic, lists, rules, inline code). On a
   hover-capable device the button reveals a card with the icon at double size,
-  the title, the description, and a **GO** button; touch devices keep plain
-  tap-to-open.
+  the title, the description, and a footer link reading **Open: _url_** (without
+  the scheme); touch devices keep plain tap-to-open.
 - **Drag to reorder** links, with Move up/down buttons for keyboard and no-JS use.
 - **One-click backup & restore** — download the whole profile (content, theme,
   identity, and images) as a `.tar.gz`, and restore it later.

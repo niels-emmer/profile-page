@@ -156,7 +156,7 @@ test('renderProfilePage renders image and font-awesome icons', () => {
   assert.match(html, /class="icon hvr-icon fa-brands fa-github"/);
 });
 
-test('renderProfilePage renders a hover card with icon, title, description, and GO', () => {
+test('renderProfilePage renders a hover card with icon, title, description, and open link', () => {
   const html = renderProfilePage({
     profile,
     links: [{ ...link, description: '**Bold** note' }],
@@ -173,7 +173,7 @@ test('renderProfilePage renders a hover card with icon, title, description, and 
   );
   assert.match(
     html,
-    /<a class="link-hover-go" rel="noopener noreferrer nofollow noindex" href="https:\/\/github\.com\/example" target="_blank">GO<\/a>/,
+    /<a class="link-hover-open" rel="noopener noreferrer nofollow noindex" href="https:\/\/github\.com\/example" target="_blank">Open: github\.com\/example<\/a>/,
   );
 });
 
@@ -181,7 +181,17 @@ test('renderProfilePage keeps the card but omits an empty description', () => {
   const html = renderProfilePage({ profile, links: [link], theme, baseUrl: 'https://example.com' });
   assert.match(html, /<div class="link-hover-card">/);
   assert.doesNotMatch(html, /link-hover-description/);
-  assert.match(html, />GO<\/a>/);
+  assert.match(html, />Open: github\.com\/example<\/a>/);
+});
+
+test('the hover-card open link drops http and https schemes', () => {
+  const http = renderProfilePage({
+    profile,
+    links: [{ ...link, url: 'http://teamrockstars.nl' }],
+    theme,
+    baseUrl: 'https://example.com',
+  });
+  assert.match(http, />Open: teamrockstars\.nl<\/a>/);
 });
 
 test('renderProfilePage escapes hostile link descriptions', () => {
@@ -196,7 +206,7 @@ test('renderProfilePage escapes hostile link descriptions', () => {
   assert.match(html, /\[x\]\(javascript:alert\(1\)\)/);
 });
 
-test('renderProfilePage picks a readable GO foreground for the accent', () => {
+test('renderProfilePage picks a readable foreground for the accent', () => {
   const base = { profile, links: [link], baseUrl: 'https://example.com' };
   assert.match(renderProfilePage({ ...base, theme }), /--accent-fg:#ffffff/);
   assert.match(

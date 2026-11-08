@@ -19,10 +19,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   HTML; all text is escaped before formatting, so hostile input renders as inert
   literal text.
 - **Front-page hover cards**: on hover-capable devices each link reveals a card
-  with its icon at double size, title, rendered description, and a `GO` button
-  that opens the same URL. It is keyboard-reachable via focus, causes no layout
-  shift, and is skipped on touch devices so taps keep navigating normally. The
-  description also appears in `contact.json` and `llms.txt`.
+  with its icon at double size, title, rendered description, and an
+  `Open: <url>` footer link (shown without its scheme) that opens the same URL.
+  The card appears after a short delay, lingers a little longer after the pointer
+  leaves, and uses a slightly translucent surface; it is keyboard-reachable via
+  focus, causes no layout shift, and is skipped on touch devices so taps keep
+  navigating normally. The description also appears in `contact.json` and
+  `llms.txt`.
 - **Site-verification files**: drop a Google/Bing/Yandex ownership file into
   `DATA_DIR/root/` and it is served at the site root (e.g.
   `/googledbb15ec766251fa6.html`). The directory is under the gitignored

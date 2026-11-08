@@ -156,13 +156,16 @@ function renderLink(link: Link, index: number): string {
     description.length > 0
       ? `<div class="link-hover-description">${description}</div>`
       : '';
+  // The footer link shows the target without its scheme, matching the QR
+  // modal's URL treatment ("Open: example.com").
+  const displayUrl = link.url.replace(/^https?:\/\//i, '');
   return (
     `<div style="--delay: ${index + 1}s" class="button-entrance link-hover-item">` +
     `<a class="button button-hover icon-hover" style="color: ${sanitizeCss(link.textColor)}; background-image: ${background};${border}" ${href}>${linkIcon(link)}${escapeHtml(link.text)}</a>` +
     `<div class="link-hover-card">` +
     `<div class="link-hover-head">${linkIcon(link, 'link-hover-icon', false)}<span class="link-hover-title">${escapeHtml(link.text)}</span></div>` +
     descriptionMarkup +
-    `<a class="link-hover-go" ${href}>GO</a>` +
+    `<a class="link-hover-open" ${href}>Open: ${escapeHtml(displayUrl)}</a>` +
     `</div>` +
     `</div>`
   );

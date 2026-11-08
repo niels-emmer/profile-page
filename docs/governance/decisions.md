@@ -254,12 +254,15 @@ when it is missing — an additive migration, not a breaking reset.
 
 On the public page each link is wrapped in a positioned `.link-hover-item` holding the
 existing anchor and a **sibling** card (never a nested anchor) with the icon at
-double size, the title, the rendered description, and a real `GO` anchor that
-reuses the link's URL, target, and rel attributes. The card is an absolute
-overlay revealed by `:hover` / `:focus-within` inside `@media (hover: hover)`
-only, so touch devices never get a stuck card and tapping still navigates. The
-hovered row raises its `z-index`, so the card is never painted under the next
-button. It uses the page's `--fg`/`--accent` variables plus an opaque surface
+double size, the title, the rendered description, and a real footer link reading
+`Open: <url>` (the URL without its scheme) that reuses the link's URL, target,
+and rel attributes. The card is an absolute overlay revealed by `:hover` /
+`:focus-within` inside `@media (hover: hover)` only, so touch devices never get
+a stuck card and tapping still navigates. To keep the card reachable it appears
+after a 0.6 s hover delay, lingers 0.8 s after the pointer leaves, and a
+transparent bridge spans the gap between the button and the card. The hovered
+row raises its `z-index`, so the card is never painted under the next button. It
+uses the page's `--fg` variables plus a slightly translucent, blurred surface
 that follows the theme (like the QR modal), so no new tokens are needed; the
 overlay causes no layout shift, and `height`/`width` caps keep long descriptions
 and small viewports usable.
