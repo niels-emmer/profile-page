@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-11-08
+
 ### Added
 
 - **Link "more info" descriptions**: every link has an optional description,
@@ -27,18 +29,30 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   focus, causes no layout shift, and is skipped on touch devices so taps keep
   navigating normally. The description also appears in `contact.json` and
   `llms.txt`.
-- **Site-verification files**: drop a Google/Bing/Yandex ownership file into
-  `DATA_DIR/root/` and it is served at the site root (e.g.
-  `/googledbb15ec766251fa6.html`). The directory is under the gitignored
-  `DATA_DIR`, so the tokens stay out of the repository.
-- **Identity & discoverability fields**: an admin **Identity** section adds optional
-  facts — alternate name, job title, works for, alumni of, knows about, and public
-  email/phone — published as schema.org structured data, a microformats `h-card`,
-  Open Graph `profile` meta, the vCard (`ROLE`/`ORG`/`EMAIL`/`TEL`), `contact.json`,
-  and a `Facts` block in `llms.txt`. The page's JSON-LD is now a `ProfilePage`
-  wrapping a `Person` with a stable `@id` and `givenName`/`familyName`, and the
-  sitemap carries a `lastmod`. The fields are stored in the key/value `settings`
-  table, so no migration is needed, and they round-trip through seed/backup.
+- **Touch link details**: on touch devices, a small **ⓘ** button beside each
+  link opens its details card as a bottom sheet with a full-width **Open**
+  action. Tapping the link itself still opens it; the desktop hover card is
+  unchanged. The sheet reuses the QR modal's CSS `:target` pattern (works
+  without JavaScript) with a small script for focus handling and Escape.
+- **Short links**: every link can carry an optional slug (for example
+  `your-domain.com/matrix`) that redirects to its real target. The field lives
+  in the link editor, normalises to lowercase, and is checked on blur and again
+  on save; duplicates and reserved paths (`admin`, `login`, and the app's other
+  root routes) are rejected. The slug is stored on the link row, so editing or
+  clearing it frees the old value immediately and deleting the link frees it
+  too. While active, the button and the public hover card's **Open:** footer
+  show and open the short link instead of the target. Existing databases gain
+  the column automatically via the same idempotent additive migration used for
+  descriptions.
+- **Identity & discoverability fields**: an admin **Identity** section adds
+  optional facts — alternate name, job title, works for, alumni of, knows about,
+  and public email/phone — published as schema.org structured data, a
+  microformats `h-card`, Open Graph `profile` meta, the vCard
+  (`ROLE`/`ORG`/`EMAIL`/`TEL`), `contact.json`, and a `Facts` block in
+  `llms.txt`. The page's JSON-LD is now a `ProfilePage` wrapping a `Person` with
+  a stable `@id` and `givenName`/`familyName`, and the sitemap carries a
+  `lastmod`. The fields are stored in the key/value `settings` table, so no
+  migration is needed, and they round-trip through seed/backup.
 - **QR code share modal**: clicking the avatar opens a modal with a QR code for
   the page URL, the URL shown as text (without its scheme), and a "Get your own
   profile page" link to the project. The QR is generated server-side by a
@@ -50,34 +64,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   uploads it, and fills the icon path field. Choosing **Font Awesome** shows a
   lookup link and the icon colour field. Only the fields for the selected icon
   type are shown.
-- **Short links**: every link can carry an optional slug (for example
-  `your-domain.com/matrix`) that redirects to its real target. The field lives
-  in the link editor, normalises to lowercase, and is checked on blur and again
-  on save; duplicates and reserved paths (`admin`, `login`, and the app's other
-  root routes) are rejected. The slug is stored on the link row, so editing or
-  clearing it frees the old value immediately and deleting the link frees it
-  too. While active, the button and the public hover card's **Open:** footer
-  show and open the short link instead of the target. Existing databases gain
-  the column automatically via the same idempotent additive migration used for
-  descriptions.
-
-### Changed
-
-- **Short-link buttons**: the public link button now uses the active short link
-  as its destination, matching the hover-card footer. The real URL remains the
-  fallback when no slug is set.
-- **Touch link details**: on touch devices, a small **ⓘ** button beside each
-  link opens its details card as a bottom sheet with a full-width **Open**
-  action. Tapping the link itself still opens it; the desktop hover card is
-  unchanged. The sheet reuses the QR modal's CSS `:target` pattern (works
-  without JS) with a small script for focus handling and Escape.
-- The reverse-proxy Docker network is now configurable via `PROXY_NETWORK` in
-  `.env` (default `proxy-net`) instead of being hardcoded in
-  `docker-compose.yml` — the quick start no longer assumes a network named
-  `proxy-net`.
-
-### Added
-
+- **Admin Preview image section**: a **Generate** button renders a 1200×630
+  social preview card (avatar, name, and tagline on the accent colour) in the
+  browser and uploads it; the public page emits it as `og:image` /
+  `twitter:image`, falling back to the avatar when unset. A plain file upload is
+  the no-JS fallback.
+- **Admin Security section**: change the admin password from the UI (min 8
+  characters). The session secret is rotated, signing out every other session,
+  and the current session is re-issued. Rate-limited per client IP.
+- **Admin Theme section**: choose a default of light, dark, or system, and
+  optionally let visitors switch the theme themselves.
+- **Visitor theme switcher**: a non-intrusive icon in the bottom-right corner of
+  the public page that expands on hover (or tap on mobile) to offer light, dark,
+  and system. The choice is remembered in `localStorage`. A forced default
+  applies without JavaScript.
+- **Per-theme background image opacity and a solid background colour** behind it
+  (both for the dark and light scheme), so a faded image can sit over a colour.
+  The colour also becomes the page background when there is no image.
+- **Site-verification files**: drop a Google/Bing/Yandex ownership file into
+  `DATA_DIR/root/` and it is served at the site root (e.g.
+  `/googledbb15ec766251fa6.html`). The directory is under the gitignored
+  `DATA_DIR`, so the tokens stay out of the repository.
 - **Bootstrap password flow**: a fresh install starts with the password
   `changeme` and the first visit to `/admin` forces you to pick a secure one
   (`/admin/set-password`). `ADMIN_PASSWORD` is no longer part of the default
@@ -85,44 +92,33 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Password reset script** (`src/reset-password.ts`): reset a forgotten admin
   password from the container (`docker exec -it profile-page node
   src/reset-password.ts`), then restart. Also signs out every session.
+- A **governance library** under `docs/governance/` — invariants, architecture,
+  style guide, UI guidelines, testing, workflow, and locked decisions (ADRs) —
+  linked from a new root [`AGENTS.md`](AGENTS.md), so anyone can fork and develop
+  in a consistent style.
+
+### Changed
+
+- **Short-link buttons**: the public link button now uses the active short link
+  as its destination, matching the hover-card footer. The real URL remains the
+  fallback when no slug is set.
+- The reverse-proxy Docker network is now configurable via `PROXY_NETWORK` in
+  `.env` (default `proxy-net`) instead of being hardcoded in
+  `docker-compose.yml` — the quick start no longer assumes a network named
+  `proxy-net`.
 - `Cache-Control: no-cache` on `/assets/*` so browsers revalidate JS/CSS after
   a deploy instead of serving a stale `admin.js` (which made new buttons
   silently do nothing).
 - The preview-image **Generate** button now shows "Generating…" while it works
   and can never hang on font loading.
+- README: added an "Editing your profile" section documenting the admin panel,
+  how to sign in, and how to find Font Awesome icon classes for links.
 
 ### Fixed
 
 - Admin **Preview image** Generate button: the deployed `admin.js` could be
   served from the browser cache after an upgrade, so the button appeared to do
   nothing. Cache revalidation + visible feedback fix this.
-
-### Added
-
-- Admin **Preview image** section: a **Generate** button renders a 1200×630
-  social preview card (avatar, name, and tagline on the accent colour) in the
-  browser and uploads it; the public page emits it as `og:image` /
-  `twitter:image`, falling back to the avatar when unset. A plain file upload is
-  the no-JS fallback.
-- Admin **Security** section: change the admin password from the UI (min 8
-  characters). The session secret is rotated, signing out every other session,
-  and the current session is re-issued. Rate-limited per client IP.
-- Admin **Theme** section: choose a default of light, dark, or system, and
-  optionally let visitors switch the theme themselves.
-- Visitor theme switcher: a non-intrusive icon in the bottom-right corner of the
-  public page that expands on hover (or tap on mobile) to offer light, dark, and
-  system. The choice is remembered in `localStorage`. A forced default applies
-  without JavaScript.
-- Per-theme background **image opacity** and a solid **background colour** behind
-  it (both for the dark and light scheme), so a faded image can sit over a colour.
-  The colour also becomes the page background when there is no image.
-- A **governance library** under `docs/governance/` — invariants, architecture,
-  style guide, UI guidelines, testing, workflow, and locked decisions (ADRs) —
-  linked from a new root [`AGENTS.md`](AGENTS.md), so anyone can fork and develop
-  in a consistent style.
-
-### Fixed
-
 - Admin colour pickers no longer stretch to the full field width; they render as
   compact swatches inline with their label.
 - Added spacing between the background upload and options forms in the admin
@@ -133,10 +129,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   inline upload/remove row, a responsive grid for the placement selects, and an
   opacity slider — instead of full-width stacked controls.
 
-### Changed
+### Security
 
-- README: added an "Editing your profile" section documenting the admin panel,
-  how to sign in, and how to find Font Awesome icon classes for links.
+- Every state-changing POST is now size-capped before its body is read (64 KB
+  for text forms, 16 KB for login, 6 MB for images, 9 MB for backgrounds, 51 MB
+  for restore), closing an unbounded-buffering path on the text routes.
+- Theme text colours are validated with `isHexColor` like the accent colour,
+  instead of accepting arbitrary strings.
+- Replacing a link icon no longer deletes the previous upload, because two links
+  may share one icon.
+- The password-reset script rejects empty or short passwords.
+- The login rate limiter drops empty keys so its event map cannot grow
+  unboundedly.
+- `Cache-Control: no-store` on `/admin*` and `/login`, which embed the CSRF
+  token.
 
 ## [1.0.0] — 2026-09-29
 
@@ -184,5 +190,6 @@ First stable release: a minimal, self-hosted, single-user link-in-bio page.
 - README, `docs/API.md`, `docs/DEPLOYMENT.md`, `SECURITY.md`,
   `docs/THIRD-PARTY.md`, `CONTRIBUTING.md`, and `CODE_OF_CONDUCT.md`.
 
-[Unreleased]: https://github.com/niels-emmer/profile-page/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/niels-emmer/profile-page/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/niels-emmer/profile-page/releases/tag/v1.1.0
 [1.0.0]: https://github.com/niels-emmer/profile-page/releases/tag/v1.0.0
