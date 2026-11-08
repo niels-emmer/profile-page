@@ -196,6 +196,30 @@ test('renderProfilePage escapes hostile link descriptions', () => {
   assert.match(html, /\[x\]\(javascript:alert\(1\)\)/);
 });
 
+test('renderProfilePage picks a readable GO foreground for the accent', () => {
+  const base = { profile, links: [link], baseUrl: 'https://example.com' };
+  assert.match(renderProfilePage({ ...base, theme }), /--accent-fg:#ffffff/);
+  assert.match(
+    renderProfilePage({ ...base, theme: { ...theme, accentColor: '#ffdd00' } }),
+    /--accent-fg:#222222/,
+  );
+});
+
+test('the hover card icon inherits the card colour, not the button icon colour', () => {
+  const html = renderProfilePage({
+    profile,
+    links: [{ ...link, iconColor: '#123456' }],
+    theme,
+    baseUrl: 'https://example.com',
+  });
+  // The button keeps its explicit icon colour; the card copy must not repeat it.
+  assert.equal(html.match(/color: #123456/g)?.length, 1);
+  assert.match(
+    html,
+    /class="icon hvr-icon link-hover-icon fa-brands fa-github"><\/i><span class="link-hover-title">GitHub<\/span>/,
+  );
+});
+
 test('imageMime maps the file extension to a MIME type', () => {
   assert.equal(imageMime('/assets/favicon.png'), 'image/png');
   assert.equal(imageMime('/assets/uploads/x.jpg'), 'image/jpeg');
@@ -408,7 +432,8 @@ test('renderLlmsTxt includes a collapsed link description', () => {
   assert.match(txt, /- \[GitHub\]\(https:\/\/github\.com\/example\) — Two lines \*\*bold\*\*/);
 });
 
-test('renderLlmsTxt publishes identity facts and machine endpoints', () => {  const txt = renderLlmsTxt(profile, [link], 'https://example.com', {
+test('renderLlmsTxt publishes identity facts and machine endpoints', () => {
+  const txt = renderLlmsTxt(profile, [link], 'https://example.com', {
     alternateName: 'Zaph',
     jobTitle: 'Cloud Architect',
     worksFor: 'Rockstars',
@@ -506,7 +531,8 @@ test('the public stylesheet does not reuse the admin .link-card class', () => {
   assert.doesNotMatch(css, /\.link-card\b/);
 });
 
-test('renderAdminPage includes the identity section', () => {  const html = renderAdminPage({
+test('renderAdminPage includes the identity section', () => {
+  const html = renderAdminPage({
     profile,
     links: [link],
     theme,
