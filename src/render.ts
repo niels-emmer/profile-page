@@ -129,13 +129,15 @@ export interface PageContext {
 }
 
 /** The link's icon: a Font Awesome glyph or an uploaded image. */
-function linkIcon(link: Link, extraClass = ''): string {
+function linkIcon(link: Link, extraClass = '', applyIconColor = true): string {
   const classes = ['icon', 'hvr-icon', extraClass].filter((name) => name.length > 0).join(' ');
   if (link.iconType === 'image') {
     return `<img alt="" class="${classes}" src="${escapeHtml(link.iconValue)}">`;
   }
   const color =
-    link.iconColor !== null ? ` style="color: ${sanitizeCss(link.iconColor)}"` : '';
+    applyIconColor && link.iconColor !== null
+      ? ` style="color: ${sanitizeCss(link.iconColor)}"`
+      : '';
   return `<i class="${classes} ${escapeHtml(link.iconValue)}"${color}></i>`;
 }
 
@@ -158,7 +160,7 @@ function renderLink(link: Link, index: number): string {
     `<div style="--delay: ${index + 1}s" class="button-entrance link-hover-item">` +
     `<a class="button button-hover icon-hover" style="color: ${sanitizeCss(link.textColor)}; background-image: ${background};${border}" ${href}>${linkIcon(link)}${escapeHtml(link.text)}</a>` +
     `<div class="link-hover-card">` +
-    `<div class="link-hover-head">${linkIcon(link, 'link-hover-icon')}<span class="link-hover-title">${escapeHtml(link.text)}</span></div>` +
+    `<div class="link-hover-head">${linkIcon(link, 'link-hover-icon', false)}<span class="link-hover-title">${escapeHtml(link.text)}</span></div>` +
     descriptionMarkup +
     `<a class="link-hover-go" ${href}>GO</a>` +
     `</div>` +
@@ -233,7 +235,7 @@ export function renderProfilePage(ctx: PageContext): string {
   const lightVars = `--bg:${backgroundValue(theme.backgroundLight, theme.backgroundImageLight)};--fg:${sanitizeCss(theme.textLight)};`;
   const themeStyle =
     `<style>` +
-    `:root{--accent:${sanitizeCss(theme.accentColor)};}` +
+    `:root{--accent:${sanitizeCss(theme.accentColor)};--accent-fg:${readableTextColor(theme.accentColor)};}` +
     `:root[data-theme='dark']{${darkVars}}` +
     `:root[data-theme='light']{${lightVars}}` +
     `@media (prefers-color-scheme: dark){:root:not([data-theme]){${darkVars}}}` +

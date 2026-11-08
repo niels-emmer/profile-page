@@ -443,7 +443,9 @@ test('openDatabase adds the description column to an older links table', () => {
          color_mode TEXT NOT NULL DEFAULT 'solid',
          color_from TEXT NOT NULL DEFAULT '#0085ff',
          color_to TEXT NOT NULL DEFAULT '#0085ff',
-         border_color TEXT
+         border_color TEXT,
+         created_at TEXT NOT NULL DEFAULT (datetime('now')),
+         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
        )`,
     );
     old.exec("INSERT INTO links (text, url) VALUES ('Old', 'https://old.example')");
@@ -501,7 +503,8 @@ test('admin can save a link description and update it later', async (t) => {
   assert.equal(listLinks(ctx.db)[0]?.description, 'Changed');
 });
 
-test('admin rejects non-http(s) link URLs', async (t) => {  const ctx = makeTestApp({ seed: false });
+test('admin rejects non-http(s) link URLs', async (t) => {
+  const ctx = makeTestApp({ seed: false });
   t.after(() => ctx.cleanup());
   const { csrf, session } = await login(ctx.app);
   const res = await ctx.app.request('/admin/links', {

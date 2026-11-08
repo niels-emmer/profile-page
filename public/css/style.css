@@ -25,6 +25,7 @@
 
 :root {
   --accent: #0085ff;
+  --accent-fg: #ffffff;
   --bg: #ffffff;
   --fg: #222222;
 }
@@ -481,6 +482,15 @@ button {
   flex: none;
 }
 
+/* Image icons are usually white brand marks; a neutral chip keeps them visible
+   on the white light-theme card as well as the dark card. */
+img.link-hover-icon {
+  padding: 0.3rem;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.18);
+}
+
 .link-hover-title {
   font-size: 15px;
   font-weight: 700;
@@ -531,13 +541,13 @@ button {
   padding: 0.35rem 1.4rem;
   border-radius: 9999px;
   background: var(--accent);
-  color: #ffffff;
+  color: var(--accent-fg);
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.06em;
 }
 .link-hover-go:hover {
-  color: #ffffff;
+  color: var(--accent-fg);
   opacity: 0.9;
 }
 .link-hover-go:focus-visible {
