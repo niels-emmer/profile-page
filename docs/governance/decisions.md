@@ -254,9 +254,9 @@ when it is missing — an additive migration, not a breaking reset.
 
 On the public page each link is wrapped in a positioned `.link-hover-item` holding the
 existing anchor and a **sibling** card (never a nested anchor) with the icon at
-double size, the title, the rendered description, and a real footer link reading
-`Open: <url>` (the URL without its scheme) that reuses the link's URL, target,
-and rel attributes. The card is an absolute overlay revealed by `:hover` /
+double size, the title, the rendered description, and a footer with plain
+`Open:` text followed by a real anchor for the URL (without its scheme) that
+reuses the link's URL, target, and rel attributes. The card is an absolute overlay revealed by `:hover` /
 `:focus-within` inside `@media (hover: hover)` only, so touch devices never get
 a stuck card and tapping still navigates. To keep the card reachable it appears
 after a 0.6 s hover delay, lingers 0.8 s after the pointer leaves, and a

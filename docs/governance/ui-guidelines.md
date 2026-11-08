@@ -122,8 +122,9 @@ Variables set per request in a `<style>` block emitted by `render.ts`:
   the icon (`icon-hover`).
 - **Link hover cards** — each button is wrapped in a positioned `.link-hover-item`
   with a sibling overlay card (`.link-hover-card`): the icon at 2.5rem, the title,
-  the rendered "more info" description, and a footer link reading
-  `Open: <url>` (the URL without its scheme, like the QR modal). It appears on
+  the rendered "more info" description, and a footer with plain `Open:` text
+  followed by the URL as a link (without its scheme, like the QR modal; dashed
+  underline that turns solid on hover). It appears on
   hover after a 0.6s delay and lingers 0.8s after the pointer leaves; an invisible
   bridge over the gap lets the pointer travel from the button into the card.
   Keyboard focus shows it immediately, and it is only revealed under

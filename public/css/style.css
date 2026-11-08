@@ -562,14 +562,21 @@ img.link-hover-icon {
   color: var(--fg);
   font-size: 13px;
   font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 2px;
   overflow-wrap: anywhere;
 }
-.link-hover-open:hover {
-  opacity: 0.75;
+/* Only the URL is a link; "Open:" is plain text. The dashed underline hints
+   that it is clickable and becomes solid on hover. */
+.link-hover-open a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dashed;
+  text-underline-offset: 2px;
 }
-.link-hover-open:focus-visible {
+.link-hover-open a:hover {
+  color: inherit;
+  text-decoration-style: solid;
+}
+.link-hover-open a:focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: 2px;
 }
