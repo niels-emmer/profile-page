@@ -173,7 +173,7 @@ test('renderProfilePage renders a hover card with icon, title, description, and 
   );
   assert.match(
     html,
-    /<a class="link-hover-open" rel="noopener noreferrer nofollow noindex" href="https:\/\/github\.com\/example" target="_blank">Open: github\.com\/example<\/a>/,
+    /<span class="link-hover-open">Open: <a rel="noopener noreferrer nofollow noindex" href="https:\/\/github\.com\/example" target="_blank">github\.com\/example<\/a><\/span>/,
   );
 });
 
@@ -181,7 +181,7 @@ test('renderProfilePage keeps the card but omits an empty description', () => {
   const html = renderProfilePage({ profile, links: [link], theme, baseUrl: 'https://example.com' });
   assert.match(html, /<div class="link-hover-card">/);
   assert.doesNotMatch(html, /link-hover-description/);
-  assert.match(html, />Open: github\.com\/example<\/a>/);
+  assert.match(html, /Open: <a [^>]*>github\.com\/example<\/a>/);
 });
 
 test('the hover-card open link drops http and https schemes', () => {
@@ -191,7 +191,7 @@ test('the hover-card open link drops http and https schemes', () => {
     theme,
     baseUrl: 'https://example.com',
   });
-  assert.match(http, />Open: teamrockstars\.nl<\/a>/);
+  assert.match(http, /Open: <a [^>]*>teamrockstars\.nl<\/a>/);
 });
 
 test('renderProfilePage escapes hostile link descriptions', () => {

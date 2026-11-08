@@ -165,7 +165,7 @@ function renderLink(link: Link, index: number): string {
     `<div class="link-hover-card">` +
     `<div class="link-hover-head">${linkIcon(link, 'link-hover-icon', false)}<span class="link-hover-title">${escapeHtml(link.text)}</span></div>` +
     descriptionMarkup +
-    `<a class="link-hover-open" ${href}>Open: ${escapeHtml(displayUrl)}</a>` +
+    `<span class="link-hover-open">Open: <a ${href}>${escapeHtml(displayUrl)}</a></span>` +
     `</div>` +
     `</div>`
   );
