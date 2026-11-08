@@ -60,8 +60,8 @@ link row, so editing or clearing it — or deleting the link — frees it
 immediately. `GET /admin/shortlink/check?slug=...` (add `&id=...` while editing)
 returns `{"slug":"...","available":true}` or
 `{"slug":"...","available":false,"error":"..."}`; the save route validates again.
-While active, the public hover card's `Open:` footer shows and opens the short
-link instead of the real target.
+While active, the public button and the hover card's `Open:` footer show and
+open the short link instead of the real target.
 
 ## Contact and discovery endpoints
 

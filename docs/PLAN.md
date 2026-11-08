@@ -166,8 +166,8 @@ Per-link shareable slugs (not in the original plan):
   uniqueness.
 - `GET /<slug>` redirects `302` (`Cache-Control: no-store`) to the link's URL.
   Reserved paths (`admin`, `login`, `logout`, `health`, `assets`) cannot be used.
-- Editing, clearing, or deleting a link frees its slug; the public hover card's
-  `Open:` footer shows the short link while active.
+- Editing, clearing, or deleting a link frees its slug; the public button and
+  the hover card's `Open:` footer show the short link while active.
 - Seed/backup validation rejects malformed, reserved, and duplicate slugs. Tests
   cover the redirect lifecycle, uniqueness, reserved names, and seed/backup
   round-trips.

@@ -147,15 +147,12 @@ function renderLink(link: Link, index: number, baseUrl: string): string {
   const background = `linear-gradient(45deg, ${from} 0%, ${to} 100%)`;
   const border = link.borderColor !== null ? ` border: 1px solid ${sanitizeCss(link.borderColor)};` : '';
   const target = link.newWindow ? ' target="_blank"' : '';
-  const href = `rel="noopener noreferrer nofollow noindex" href="${escapeHtml(link.url)}"${target}`;
-  // When a short link is active, the card footer opens and shows it instead of
-  // the (often cryptic) target. The redirect keeps the destination unchanged.
+  // When a short link is active, both the button and the card footer use it
+  // instead of the (often cryptic) target. The redirect keeps the destination
+  // unchanged.
   const shortUrl =
     link.shortlink !== null ? `${baseUrl.replace(/\/+$/, '')}/${link.shortlink}` : null;
-  const openHref =
-    shortUrl !== null
-      ? `rel="noopener noreferrer nofollow noindex" href="${escapeHtml(shortUrl)}"${target}`
-      : href;
+  const href = `rel="noopener noreferrer nofollow noindex" href="${escapeHtml(shortUrl ?? link.url)}"${target}`;
   // The hover card is a sibling of the anchor, never nested inside it. Its
   // description is rendered by the dependency-free markdown subset, which
   // escapes all text before adding formatting.
@@ -173,7 +170,7 @@ function renderLink(link: Link, index: number, baseUrl: string): string {
     `<div class="link-hover-card">` +
     `<div class="link-hover-head">${linkIcon(link, 'link-hover-icon', false)}<span class="link-hover-title">${escapeHtml(link.text)}</span></div>` +
     descriptionMarkup +
-    `<span class="link-hover-open">Open: <a ${openHref}>${escapeHtml(displayUrl)}</a></span>` +
+    `<span class="link-hover-open">Open: <a ${href}>${escapeHtml(displayUrl)}</a></span>` +
     `</div>` +
     `</div>`
   );

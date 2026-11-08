@@ -62,8 +62,8 @@ footprint, and your data stays on your own disk.
   target, is checked for availability as you leave the field (and again on
   save), and cannot duplicate another link or shadow an app route such as
   `/admin` or `/login`. It lives on the link, so editing or clearing it frees
-  the old slug immediately; while active, the hover card's **Open:** footer
-  shows the short link instead of the target.
+  the old slug immediately; while active, the button and the hover card's
+  **Open:** footer show and open the short link instead of the target.
 - **Drag to reorder** links, with Move up/down buttons for keyboard and no-JS use.
 - **One-click backup & restore** — download the whole profile (content, theme,
   identity, and images) as a `.tar.gz`, and restore it later.
@@ -209,9 +209,9 @@ URL.
   link**; a duplicate is not saved.
 - There is no separate short-link screen. The slug belongs to its link, so
   changing or clearing it — or deleting the link — frees the old slug.
-- While a slug is active, the link's hover card shows `Open: your-domain/slug`
-  instead of the raw target. The short URL itself 302-redirects, so the target
-  can change without breaking a shared link.
+- While a slug is active, the button itself opens the short URL and the hover
+  card's `Open:` footer shows it instead of the raw target. The short URL
+  302-redirects, so the target can change without breaking a shared link.
 
 ## Build, debug, develop
 
