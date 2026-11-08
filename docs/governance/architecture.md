@@ -77,7 +77,10 @@ SECURITY.md          threat model and controls (repo root — GitHub only detect
 2. **`authGuard`** on `/admin` and `/admin/*` — redirects to `/login` before any
    body is read.
 3. **Route handlers** — public pages, discovery files, auth, admin, backup.
-4. **Static assets** — `/assets/uploads/*` (from `DATA_DIR`) first, then
+4. **Active short links** — `GET /<slug>` redirects to the owning link's URL
+   (`302`, `no-store`); the route sits immediately before the root-file handler
+   so real routes always win.
+5. **Static assets** — `/assets/uploads/*` (from `DATA_DIR`) first, then
    `/assets/*` (from `public/`).
 
 `src/server.ts` is a thin bootstrap: it wires the pieces and calls
@@ -91,7 +94,7 @@ Four tables (`src/db.ts`):
 | Table | Shape | Notes |
 |---|---|---|
 | `profile` | single row, `id = 1` | name, tagline, description, avatar_path |
-| `links` | one row per link | ordered by `position`; colours and an optional "more info" description per link |
+| `links` | one row per link | ordered by `position`; colours, an optional "more info" description, and an optional unique short-link slug per link |
 | `settings` | key/value | **all theme state** under `theme.*` keys |
 | `auth` | single row, `id = 1` | password hash + salt, session secret |
 
@@ -118,7 +121,8 @@ access — it receives plain objects and returns strings. Every interpolated val
 passes through `escapeHtml`; every CSS value through `sanitizeCss`.
 
 - **`renderProfilePage`** — the public page: profile, links (each with a
-  hover/focus "more info" card), discovery meta
+  hover/focus "more info" card whose `Open:` footer shows the link's short link
+  when one is active), discovery meta
   (`canonical`, `theme-color`, schema.org `Person` JSON-LD, `rel="me"`,
   `rel="alternate"`), a per-request `<style>` block for the theme, the
   avatar-triggered QR modal (an inline SVG built by `qr.ts`), and the visitor

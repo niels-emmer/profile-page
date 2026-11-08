@@ -24,6 +24,8 @@ import {
   isSafeAssetRef,
   isTelephone,
   isThemeMode,
+  normalizeShortlink,
+  shortlinkProblem,
 } from './validate.ts';
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -101,17 +103,30 @@ export function parseSeed(raw: unknown): SeedFile {
 }
 
 /**
+ * Fill in a link's optional short link for older seeds. A missing value becomes
+ * null; a non-string is rejected rather than coerced.
+ */
+function normalizeShortlinkValue(raw: unknown): string | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== 'string') throw new Error('Link "shortlink" must be a string');
+  const slug = normalizeShortlink(raw);
+  return slug.length > 0 ? slug : null;
+}
+
+/**
  * Fill in a link's optional description for older seeds. A missing value
  * becomes empty; a non-string is rejected rather than coerced.
  */
 function normalizeLink(raw: unknown): NewLink {
-  const description = asObject(raw)['description'];
+  const obj = asObject(raw);
+  const description = obj['description'];
   if (description !== undefined && typeof description !== 'string') {
     throw new Error('Link "description" must be a string');
   }
   return {
     ...(raw as NewLink),
     description: cleanMultiline(description ?? '', MAX_LINK_DESCRIPTION),
+    shortlink: normalizeShortlinkValue(obj['shortlink']),
   };
 }
 
@@ -158,6 +173,7 @@ export function validateSeed(seed: SeedFile): void {
       throw new Error(`Invalid background image path: ${bg.imagePath}`);
     }
   }
+  const shortlinks = new Set<string>();
   for (const link of seed.links) {
     if (!isHttpUrl(link.url)) {
       throw new Error(`Invalid link URL (must be http/https): ${link.url}`);
@@ -167,6 +183,22 @@ export function validateSeed(seed: SeedFile): void {
     }
     if (link.description.length > MAX_LINK_DESCRIPTION) {
       throw new Error('Link description is too long');
+    }
+    const shortlink = link.shortlink ?? '';
+    const problem = shortlinkProblem(shortlink);
+    if (problem === 'format') {
+      throw new Error(
+        `Invalid short link (use 1-32 lowercase letters, numbers, or hyphens): ${shortlink}`,
+      );
+    }
+    if (problem === 'reserved') {
+      throw new Error(`Short link is reserved: ${shortlink}`);
+    }
+    if (shortlink.length > 0) {
+      if (shortlinks.has(shortlink)) {
+        throw new Error(`Duplicate short link: ${shortlink}`);
+      }
+      shortlinks.add(shortlink);
     }
   }
   if (seed.entity.email.length > 0 && !isEmail(seed.entity.email)) {

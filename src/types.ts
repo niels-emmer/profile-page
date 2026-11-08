@@ -43,6 +43,12 @@ export interface Link {
    * small markdown subset; empty means the card omits the description.
    */
   description: string;
+  /**
+   * Optional short-link slug (`host/<slug>` redirects to `url`). Stored on the
+   * link itself, so it exists only while set and is freed when edited or
+   * cleared. Null means no short link.
+   */
+  shortlink: string | null;
   newWindow: boolean;
   iconType: IconType;
   /** Font Awesome class (e.g. "fa-brands fa-github") or an upload path. */

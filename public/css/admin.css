@@ -425,6 +425,18 @@ html {
   font-size: 0.8125rem;
 }
 
+/* Inline hint/validation text under a field (e.g. short-link availability). */
+.admin-field-hint {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+.admin-field-hint--error {
+  color: hsl(0 90% 75%);
+}
+
 /* ---------------------------- media previews --------------------------- */
 
 .admin-avatar {

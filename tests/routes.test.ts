@@ -453,11 +453,13 @@ test('openDatabase adds the description column to an older links table', () => {
 
     const db = openDatabase(config);
     assert.equal(listLinks(db)[0]?.description, '');
+    assert.equal(listLinks(db)[0]?.shortlink, null);
     db.close();
 
     // A second open must not try to add the column again.
     const again = openDatabase(config);
     assert.equal(listLinks(again)[0]?.description, '');
+    assert.equal(listLinks(again)[0]?.shortlink, null);
     again.close();
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -515,6 +517,170 @@ test('admin rejects non-http(s) link URLs', async (t) => {
   assert.equal(res.status, 302);
   assert.match(res.headers.get('location') ?? '', /error=/);
   assert.equal(listLinks(ctx.db).length, 0);
+});
+
+test('short links redirect, normalise, and are freed when edited or cleared', async (t) => {
+  const ctx = makeTestApp({ seed: false });
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS };
+  const save = (fields: Record<string, string>) =>
+    ctx.app.request('/admin/links', {
+      method: 'POST',
+      headers,
+      body: formBody({ csrf, iconType: 'fa', iconValue: 'fa-link', ...fields }),
+    });
+
+  const created = await save({
+    text: 'Matrix',
+    url: 'https://matrix.to/#/@me:example.com',
+    shortlink: ' Matrix ',
+  });
+  assert.equal(created.status, 302);
+  const link = listLinks(ctx.db)[0];
+  assert.ok(link !== undefined);
+  assert.equal(link.shortlink, 'matrix');
+
+  const redirect = await ctx.app.request('/matrix');
+  assert.equal(redirect.status, 302);
+  assert.equal(redirect.headers.get('location'), 'https://matrix.to/#/@me:example.com');
+  assert.equal(redirect.headers.get('cache-control'), 'no-store');
+
+  // A slug that belongs to no link is a normal 404, and real routes still win.
+  assert.equal((await ctx.app.request('/unknown')).status, 404);
+  assert.equal((await ctx.app.request('/health')).status, 200);
+
+  // Editing the slug frees the old one.
+  const edit = await save({
+    id: String(link.id),
+    text: 'Matrix',
+    url: 'https://matrix.to/#/@me:example.com',
+    shortlink: 'chat',
+  });
+  assert.equal(edit.status, 302);
+  assert.equal(listLinks(ctx.db)[0]?.shortlink, 'chat');
+  assert.equal((await ctx.app.request('/matrix')).status, 404);
+  assert.equal((await ctx.app.request('/chat')).status, 302);
+
+  // Clearing it frees the slug too.
+  const clear = await save({
+    id: String(link.id),
+    text: 'Matrix',
+    url: 'https://matrix.to/#/@me:example.com',
+    shortlink: '',
+  });
+  assert.equal(clear.status, 302);
+  assert.equal(listLinks(ctx.db)[0]?.shortlink, null);
+  assert.equal((await ctx.app.request('/chat')).status, 404);
+
+  // Deleting the link frees its slug as well.
+  await save({ text: 'Signal', url: 'https://signal.me/#x', shortlink: 'signal' });
+  const signal = listLinks(ctx.db).find((candidate) => candidate.shortlink === 'signal');
+  assert.ok(signal !== undefined);
+  const remove = await ctx.app.request(`/admin/links/${signal.id}/delete`, {
+    method: 'POST',
+    headers,
+    body: formBody({ csrf }),
+  });
+  assert.equal(remove.status, 302);
+  assert.equal((await ctx.app.request('/signal')).status, 404);
+});
+
+test('short links must be unique and cannot shadow app routes', async (t) => {
+  const ctx = makeTestApp({ seed: false });
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS };
+  const save = (fields: Record<string, string>) =>
+    ctx.app.request('/admin/links', {
+      method: 'POST',
+      headers,
+      body: formBody({ csrf, iconType: 'fa', iconValue: 'fa-link', ...fields }),
+    });
+
+  assert.equal(
+    (await save({ text: 'One', url: 'https://one.example', shortlink: 'one' })).status,
+    302,
+  );
+
+  // Case-insensitive duplicate.
+  const duplicate = await save({ text: 'Two', url: 'https://two.example', shortlink: 'ONE' });
+  assert.match(duplicate.headers.get('location') ?? '', /error=/);
+  assert.equal(listLinks(ctx.db).length, 1);
+
+  // Reserved paths and invalid formats are rejected without creating a link.
+  for (const bad of ['admin', 'login', 'logout', 'health', 'assets', 'Bad Slug', 'two_words', '-lead', 'a'.repeat(33)]) {
+    const res = await save({ text: 'Bad', url: 'https://bad.example', shortlink: bad });
+    assert.equal(res.status, 302, bad);
+    assert.match(res.headers.get('location') ?? '', /error=/, bad);
+  }
+  assert.equal(listLinks(ctx.db).length, 1);
+
+  // Updating a link onto another link's slug is rejected; nothing changes.
+  await save({ text: 'Two', url: 'https://two.example' });
+  const second = listLinks(ctx.db).find((candidate) => candidate.text === 'Two');
+  assert.ok(second !== undefined);
+  const clash = await save({
+    id: String(second.id),
+    text: 'Two',
+    url: 'https://two.example',
+    shortlink: 'one',
+  });
+  assert.match(clash.headers.get('location') ?? '', /error=/);
+  assert.equal(listLinks(ctx.db).find((candidate) => candidate.id === second.id)?.shortlink, null);
+  assert.equal(listLinks(ctx.db).find((candidate) => candidate.text === 'One')?.shortlink, 'one');
+});
+
+test('the short-link check endpoint reports availability', async (t) => {
+  const ctx = makeTestApp({ seed: false });
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const headers = { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS };
+  const check = (query: string) =>
+    ctx.app.request(`/admin/shortlink/check?${query}`, { headers: { cookie: `session=${session}` } });
+
+  // The check is behind the admin guard.
+  assert.equal((await ctx.app.request('/admin/shortlink/check?slug=one')).status, 302);
+
+  const free = await check('slug=Matrix');
+  assert.deepEqual(await free.json(), { slug: 'matrix', available: true });
+
+  assert.equal(
+    (
+      await ctx.app.request('/admin/links', {
+        method: 'POST',
+        headers,
+        body: formBody({
+          csrf,
+          text: 'One',
+          url: 'https://one.example',
+          shortlink: 'one',
+          iconType: 'fa',
+          iconValue: 'fa-link',
+        }),
+      })
+    ).status,
+    302,
+  );
+  const link = listLinks(ctx.db)[0];
+  assert.ok(link !== undefined);
+
+  const taken = await check('slug=one');
+  assert.deepEqual(await taken.json(), {
+    slug: 'one',
+    available: false,
+    error: 'That short link is already in use.',
+  });
+
+  const own = await check(`slug=one&id=${link.id}`);
+  assert.deepEqual(await own.json(), { slug: 'one', available: true });
+
+  const reserved = await check('slug=admin');
+  assert.deepEqual(await reserved.json(), {
+    slug: 'admin',
+    available: false,
+    error: 'That short link is reserved.',
+  });
 });
 
 test('logout clears the session', async (t) => {

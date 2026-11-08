@@ -57,6 +57,13 @@ footprint, and your data stays on your own disk.
   the title, the description, and a footer with plain **Open:** text followed by
   the URL as a link (without the scheme, dashed underline turning solid on
   hover); touch devices keep plain tap-to-open.
+- **Short links** — give any link a short slug (for example
+  `your-domain.com/matrix`) right in its editor. The slug redirects to the real
+  target, is checked for availability as you leave the field (and again on
+  save), and cannot duplicate another link or shadow an app route such as
+  `/admin` or `/login`. It lives on the link, so editing or clearing it frees
+  the old slug immediately; while active, the hover card's **Open:** footer
+  shows the short link instead of the target.
 - **Drag to reorder** links, with Move up/down buttons for keyboard and no-JS use.
 - **One-click backup & restore** — download the whole profile (content, theme,
   identity, and images) as a `.tar.gz`, and restore it later.
@@ -167,7 +174,7 @@ The panel covers:
 | **Preview** | Generate a 1200×630 social preview card (name, tagline, avatar on the accent colour) shown when your page is shared, or upload your own |
 | **Favicon** | Upload a browser-tab icon (centre-cropped to a 512×512 PNG in your browser) |
 | **Background** | Per-theme background image with opacity, a solid colour behind it, and size/position/tiling/scroll options |
-| **Links** | Add, edit, delete, and drag-to-reorder your link buttons, with an optional "more info" description shown in a hover card |
+| **Links** | Add, edit, delete, and drag-to-reorder your link buttons, with an optional "more info" description shown in a hover card and an optional short-link slug |
 | **Backup & restore** | Download or restore the whole profile as a `.tar.gz` |
 | **Security** | Change your admin password (signs out other sessions) |
 

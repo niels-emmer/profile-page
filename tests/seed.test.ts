@@ -59,6 +59,7 @@ const seed: SeedFile = {
       text: 'One',
       url: 'https://one.example',
       description: 'More about one.',
+      shortlink: null,
       newWindow: true,
       iconType: 'fa',
       iconValue: 'fa-link',
@@ -73,6 +74,7 @@ const seed: SeedFile = {
       text: 'Two',
       url: 'https://two.example',
       description: '',
+      shortlink: null,
       newWindow: false,
       iconType: 'image',
       iconValue: '/assets/uploads/icon.svg',
@@ -171,8 +173,9 @@ test('applySeed replaces the profile, theme, and links', () => {
     assert.equal(entity.telephone, '+31 6 12345678');
 
     // Re-applying replaces rather than appends.
-    applySeed(db, { ...seed, links: [seed.links[0]!] });
+    applySeed(db, { ...seed, links: [{ ...seed.links[0]!, shortlink: 'one' }] });
     assert.equal(listLinks(db).length, 1);
+    assert.equal(listLinks(db)[0]?.shortlink, 'one');
     db.close();
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -267,5 +270,67 @@ test('validateSeed rejects an over-long link description', () => {
         links: [{ ...seed.links[0]!, description: 'x'.repeat(MAX_LINK_DESCRIPTION + 1) }],
       }),
     /too long/,
+  );
+});
+
+test('parseSeed normalises short links and defaults a missing one to null', () => {
+  const base = seed.links[0]!;
+  const parsed = parseSeed({
+    profile: seed.profile,
+    theme: seed.theme,
+    links: [
+      { ...base, shortlink: ' Matrix ' },
+      {
+        text: base.text,
+        url: base.url,
+        newWindow: base.newWindow,
+        iconType: base.iconType,
+        iconValue: base.iconValue,
+        iconColor: base.iconColor,
+        textColor: base.textColor,
+        colorMode: base.colorMode,
+        colorFrom: base.colorFrom,
+        colorTo: base.colorTo,
+        borderColor: base.borderColor,
+      },
+    ],
+  });
+  assert.equal(parsed.links[0]?.shortlink, 'matrix');
+  assert.equal(parsed.links[1]?.shortlink, null);
+});
+
+test('parseSeed rejects a non-string short link', () => {
+  assert.throws(
+    () =>
+      parseSeed({
+        profile: seed.profile,
+        theme: seed.theme,
+        links: [{ ...seed.links[0]!, shortlink: 42 }],
+      }),
+    /shortlink/,
+  );
+});
+
+test('validateSeed rejects invalid, reserved, and duplicate short links', () => {
+  const first = seed.links[0]!;
+  const second = seed.links[1]!;
+  assert.throws(
+    () => validateSeed({ ...seed, links: [{ ...first, shortlink: 'Bad Slug' }] }),
+    /short link/,
+  );
+  assert.throws(
+    () => validateSeed({ ...seed, links: [{ ...first, shortlink: 'admin' }] }),
+    /reserved/,
+  );
+  assert.throws(
+    () =>
+      validateSeed({
+        ...seed,
+        links: [
+          { ...first, shortlink: 'same' },
+          { ...second, shortlink: 'same' },
+        ],
+      }),
+    /Duplicate/,
   );
 });

@@ -16,6 +16,7 @@ const link: Link = {
   text: 'GitHub',
   url: 'https://github.com/example',
   description: 'A description with **bold**.',
+  shortlink: null,
   newWindow: true,
   iconType: 'fa',
   iconValue: 'fa-brands fa-github',

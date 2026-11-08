@@ -14,7 +14,7 @@ import type {
   ThemeMode,
   ThemeSettings,
 } from './types.ts';
-import { isEmail, isTelephone } from './validate.ts';
+import { MAX_SHORTLINK_LENGTH, isEmail, isTelephone } from './validate.ts';
 
 const BADGE_SVG =
   '<svg class="badge" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" aria-hidden="true">' +
@@ -141,13 +141,21 @@ function linkIcon(link: Link, extraClass = '', applyIconColor = true): string {
   return `<i class="${classes} ${escapeHtml(link.iconValue)}"${color}></i>`;
 }
 
-function renderLink(link: Link, index: number): string {
+function renderLink(link: Link, index: number, baseUrl: string): string {
   const from = sanitizeCss(link.colorFrom);
   const to = link.colorMode === 'gradient' ? sanitizeCss(link.colorTo) : from;
   const background = `linear-gradient(45deg, ${from} 0%, ${to} 100%)`;
   const border = link.borderColor !== null ? ` border: 1px solid ${sanitizeCss(link.borderColor)};` : '';
   const target = link.newWindow ? ' target="_blank"' : '';
   const href = `rel="noopener noreferrer nofollow noindex" href="${escapeHtml(link.url)}"${target}`;
+  // When a short link is active, the card footer opens and shows it instead of
+  // the (often cryptic) target. The redirect keeps the destination unchanged.
+  const shortUrl =
+    link.shortlink !== null ? `${baseUrl.replace(/\/+$/, '')}/${link.shortlink}` : null;
+  const openHref =
+    shortUrl !== null
+      ? `rel="noopener noreferrer nofollow noindex" href="${escapeHtml(shortUrl)}"${target}`
+      : href;
   // The hover card is a sibling of the anchor, never nested inside it. Its
   // description is rendered by the dependency-free markdown subset, which
   // escapes all text before adding formatting.
@@ -157,15 +165,15 @@ function renderLink(link: Link, index: number): string {
       ? `<div class="link-hover-description">${description}</div>`
       : '';
   // The footer link shows the target without its scheme, matching the QR
-  // modal's URL treatment ("Open: example.com").
-  const displayUrl = link.url.replace(/^https?:\/\//i, '');
+  // modal's URL treatment ("Open: example.com"). A short link replaces it.
+  const displayUrl = (shortUrl ?? link.url).replace(/^https?:\/\//i, '');
   return (
     `<div style="--delay: ${index + 1}s" class="button-entrance link-hover-item">` +
     `<a class="button button-hover icon-hover" style="color: ${sanitizeCss(link.textColor)}; background-image: ${background};${border}" ${href}>${linkIcon(link)}${escapeHtml(link.text)}</a>` +
     `<div class="link-hover-card">` +
     `<div class="link-hover-head">${linkIcon(link, 'link-hover-icon', false)}<span class="link-hover-title">${escapeHtml(link.text)}</span></div>` +
     descriptionMarkup +
-    `<span class="link-hover-open">Open: <a ${href}>${escapeHtml(displayUrl)}</a></span>` +
+    `<span class="link-hover-open">Open: <a ${openHref}>${escapeHtml(displayUrl)}</a></span>` +
     `</div>` +
     `</div>`
   );
@@ -251,7 +259,7 @@ export function renderProfilePage(ctx: PageContext): string {
     (theme.defaultMode === 'system' ? '' : ` data-theme="${theme.defaultMode}"`) +
     (theme.visitorToggle ? ' data-theme-toggle="on"' : '');
 
-  const buttons = links.map((link, index) => renderLink(link, index)).join('\n');
+  const buttons = links.map((link, index) => renderLink(link, index, baseUrl)).join('\n');
 
   // The QR code and its modal. When the URL cannot be encoded the feature is
   // omitted entirely and the avatar stays a plain image.
@@ -495,6 +503,8 @@ export interface AdminContext {
   error?: string;
   /** True when ADMIN_PASSWORD is set, so a UI password change is temporary. */
   passwordManagedByEnv: boolean;
+  /** Absolute site URL; shown as the short-link prefix in the editor. */
+  baseUrl?: string;
 }
 
 function field(label: string, name: string, value: string, type = 'text'): string {
@@ -512,6 +522,18 @@ function textareaField(label: string, name: string, value: string, rows = 3): st
 function colorField(label: string, name: string, value: string): string {
   return `<label class="admin-field admin-field--color">${escapeHtml(label)}
       <input type="color" name="${name}" value="${escapeHtml(value)}">
+    </label>`;
+}
+
+/**
+ * The optional short-link slug. The prefix is static text in the label; the hint
+ * doubles as the live availability message that admin.js fills after a check.
+ */
+function shortlinkField(value: string | null, host: string): string {
+  const label = host.length > 0 ? `Short link (optional, ${host}/)` : 'Short link (optional)';
+  return `<label class="admin-field">${escapeHtml(label)}
+      <input type="text" name="shortlink" value="${escapeHtml(value ?? '')}" placeholder="matrix" maxlength="${MAX_SHORTLINK_LENGTH}" pattern="[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?" autocomplete="off" autocapitalize="none" spellcheck="false" data-shortlink-check="/admin/shortlink/check">
+      <span class="admin-field-hint" data-shortlink-status data-shortlink-default="Letters, numbers, and hyphens." aria-live="polite">Letters, numbers, and hyphens.</span>
     </label>`;
 }
 
@@ -778,7 +800,13 @@ function reorderForm(order: string, csrfToken: string, label: string, disabled: 
     </form>`;
 }
 
-function renderLinkEditor(link: Link, index: number, links: Link[], csrfToken: string): string {
+function renderLinkEditor(
+  link: Link,
+  index: number,
+  links: Link[],
+  csrfToken: string,
+  shortlinkHost: string,
+): string {
   const upOrder = moveOrder(links, index, -1);
   const downOrder = moveOrder(links, index, 1);
   return `<details class="link-card" data-id="${link.id}">
@@ -790,6 +818,7 @@ function renderLinkEditor(link: Link, index: number, links: Link[], csrfToken: s
       ${field('Text', 'text', link.text)}
       ${field('URL', 'url', link.url, 'url')}
     </div>
+    ${shortlinkField(link.shortlink, shortlinkHost)}
     <label class="admin-check"><input type="checkbox" name="newWindow"${link.newWindow ? ' checked' : ''}> Open in new window</label>
     ${textareaField('More info (optional)', 'description', link.description)}
     ${iconFields(link.iconType, link.iconValue, link.iconColor)}
@@ -870,11 +899,12 @@ export function renderAdminPage(ctx: AdminContext): string {
   const { profile, links, theme, csrfToken, saved, error, passwordManagedByEnv } = ctx;
   const entity = ctx.entity ?? DEFAULT_ENTITY;
   const avatar = profile.avatarPath ?? '/assets/default-avatar.svg';
+  const shortlinkHost = (ctx.baseUrl ?? '').replace(/^https?:\/\//i, '').replace(/\/+$/, '');
   const banner = saved ? '<p class="admin-ok">Saved.</p>' : '';
   const errorBanner = error !== undefined ? `<p class="admin-error">${escapeHtml(error)}</p>` : '';
 
   const linkEditors = links
-    .map((link, index) => renderLinkEditor(link, index, links, csrfToken))
+    .map((link, index) => renderLinkEditor(link, index, links, csrfToken, shortlinkHost))
     .join('\n');
 
   return `<!DOCTYPE html>
@@ -977,6 +1007,7 @@ export function renderAdminPage(ctx: AdminContext): string {
         ${field('Text', 'text', '')}
         ${field('URL', 'url', '', 'url')}
       </div>
+      ${shortlinkField(null, shortlinkHost)}
       <label class="admin-check"><input type="checkbox" name="newWindow" checked> Open in new window</label>
       ${textareaField('More info (optional)', 'description', '')}
       ${iconFields('fa', '', null)}

@@ -28,6 +28,7 @@ import {
   createLink,
   deleteLink,
   getEntity,
+  getLinkByShortlink,
   getProfile,
   getProfileUpdatedAt,
   getTheme,
@@ -53,6 +54,7 @@ import type { BackgroundSettings, NewLink, ThemeSettings } from './types.ts';
 import { MAX_BACKGROUND_BYTES, UploadError, deleteUpload, saveImage } from './upload.ts';
 import {
   MAX_LINK_DESCRIPTION,
+  MAX_SHORTLINK_LENGTH,
   cleanMultiline,
   cleanText,
   isBackgroundAttachment,
@@ -66,7 +68,9 @@ import {
   isSafeAssetRef,
   isTelephone,
   isThemeMode,
+  normalizeShortlink,
   parseLines,
+  shortlinkProblem,
 } from './validate.ts';
 
 export interface AppDeps {
@@ -274,6 +278,7 @@ export function createApp(deps: AppDeps): Hono {
       text: formField(body, 'text').trim(),
       url: formField(body, 'url').trim(),
       description: cleanMultiline(formField(body, 'description'), MAX_LINK_DESCRIPTION),
+      shortlink: normalizeShortlink(formField(body, 'shortlink')) || null,
       newWindow: formField(body, 'newWindow') === 'on',
       iconType: formField(body, 'iconType') === 'image' ? 'image' : 'fa',
       iconValue: formField(body, 'iconValue').trim(),
@@ -466,6 +471,7 @@ export function createApp(deps: AppDeps): Hono {
         csrfToken: ensureCsrf(c),
         saved: c.req.query('ok') !== undefined,
         passwordManagedByEnv: config.adminPassword !== undefined,
+        baseUrl: requestBaseUrl(c),
         ...(error !== undefined ? { error } : {}),
       }),
     );
@@ -697,6 +703,33 @@ export function createApp(deps: AppDeps): Hono {
     return c.redirect('/admin?ok=1');
   });
 
+  /**
+   * Live availability check for the link editor. Format, reserved paths, and
+   * uniqueness are all decided here so the browser never has to duplicate the
+   * rules; the save route repeats them as the authoritative gate.
+   */
+  app.get('/admin/shortlink/check', (c) => {
+    const slug = normalizeShortlink(c.req.query('slug') ?? '');
+    const id = Number.parseInt(c.req.query('id') ?? '', 10);
+    const currentId = Number.isInteger(id) && id > 0 ? id : undefined;
+    const problem = shortlinkProblem(slug);
+    if (problem === 'reserved') {
+      return c.json({ slug, available: false, error: 'That short link is reserved.' });
+    }
+    if (problem === 'format') {
+      return c.json({
+        slug,
+        available: false,
+        error: `Use 1-${MAX_SHORTLINK_LENGTH} lowercase letters, numbers, or hyphens.`,
+      });
+    }
+    const owner = slug.length > 0 ? getLinkByShortlink(db, slug) : undefined;
+    if (owner !== undefined && owner.id !== currentId) {
+      return c.json({ slug, available: false, error: 'That short link is already in use.' });
+    }
+    return c.json({ slug, available: true });
+  });
+
   app.post('/admin/links', async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
@@ -710,11 +743,45 @@ export function createApp(deps: AppDeps): Hono {
         '/admin?error=' + encodeURIComponent('Icon image must be a local /assets/ path'),
       );
     }
+
     const id = Number.parseInt(formField(body, 'id'), 10);
-    if (Number.isInteger(id) && id > 0) {
-      updateLink(db, id, link);
-    } else {
-      createLink(db, link);
+    const currentId = Number.isInteger(id) && id > 0 ? id : undefined;
+
+    const problem = shortlinkProblem(link.shortlink ?? '');
+    if (problem === 'reserved') {
+      return c.redirect('/admin?error=' + encodeURIComponent('That short link is reserved.'));
+    }
+    if (problem === 'format') {
+      return c.redirect(
+        '/admin?error=' +
+          encodeURIComponent(
+            `Short links must be 1-${MAX_SHORTLINK_LENGTH} lowercase letters, numbers, or hyphens.`,
+          ),
+      );
+    }
+    if (link.shortlink !== null) {
+      const owner = getLinkByShortlink(db, link.shortlink);
+      if (owner !== undefined && owner.id !== currentId) {
+        return c.redirect(
+          '/admin?error=' + encodeURIComponent('That short link is already in use.'),
+        );
+      }
+    }
+
+    try {
+      if (currentId !== undefined) {
+        updateLink(db, currentId, link);
+      } else {
+        createLink(db, link);
+      }
+    } catch (error) {
+      // The unique index is the backstop for a race with another save.
+      if (error instanceof Error && /UNIQUE constraint failed/i.test(error.message)) {
+        return c.redirect(
+          '/admin?error=' + encodeURIComponent('That short link is already in use.'),
+        );
+      }
+      throw error;
     }
     return c.redirect('/admin?ok=1');
   });
@@ -771,6 +838,30 @@ export function createApp(deps: AppDeps): Hono {
       return c.redirect('/admin?ok=1');
     },
   );
+
+  /* ------------------------------ short links ---------------------------- */
+
+  // Active short links redirect at the site root. Registered just before the
+  // root-file route so a real route (e.g. /admin) always wins, and a slug that
+  // does not belong to a link falls through to the next match. A 302 (not 301)
+  // is deliberate: the owner may edit or clear the slug, and a cached permanent
+  // redirect would keep pointing at the old target.
+  app.get('/:slug', async (c, next) => {
+    const slug = normalizeShortlink(c.req.param('slug'));
+    if (slug.length === 0 || shortlinkProblem(slug) !== null) {
+      await next();
+      return;
+    }
+    const link = getLinkByShortlink(db, slug);
+    if (link === undefined || !isHttpUrl(link.url)) {
+      await next();
+      return;
+    }
+    c.header('Cache-Control', 'no-store');
+    // `isHttpUrl` above guarantees the parse succeeds; toString() normalises
+    // any non-ASCII characters before they reach the Location header.
+    return c.redirect(new URL(link.url).toString(), 302);
+  });
 
   /* ------------------------- site verification --------------------------- */
 

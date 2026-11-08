@@ -21,6 +21,7 @@ const LINK: NewLink = {
   text: 'One',
   url: 'https://one.example',
   description: 'More about one.',
+  shortlink: 'one',
   newWindow: true,
   iconType: 'fa',
   iconValue: 'fa-link',
@@ -73,6 +74,7 @@ test('buildBackup writes a seed and every upload', () => {
     const seed = JSON.parse(entries.find((entry) => entry.name === 'seed.json')!.data.toString()) as SeedFile;
     assert.equal(seed.profile.name, 'Restored');
     assert.equal(seed.links.length, 1);
+    assert.equal(seed.links[0]?.shortlink, 'one');
     assert.equal((seed.links[0] as unknown as { id?: number }).id, undefined);
   } finally {
     dispose(fixture);

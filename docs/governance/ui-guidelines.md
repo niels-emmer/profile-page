@@ -65,6 +65,7 @@ Reuse these classes; do not invent new ones for the same job.
 | Card | `.admin-card`, `.admin-card-header`, `.admin-card-description` | One card per admin section, `id` matches the nav anchor |
 | Sub-section | `.admin-subsection`, `.admin-subsection-title`, `.admin-subsection-description` | A bordered panel *inside* a card (e.g. Backup and Restore) |
 | Field | `.admin-field` (+ `--color`, `--range`) | Label above control; `.admin-field--color` puts a compact swatch inline right |
+| Field hint | `.admin-field-hint` (+ `--error`) | Small muted helper or validation text under a control; used for short-link availability feedback |
 | Grid | `.admin-grid` | `auto-fit, minmax(160px, 1fr)` — keeps related selects from stacking full-width |
 | File row | `.admin-file-row` | `[file input] [Upload] [Remove]` inline |
 | Colour toggle | `.admin-color-toggle` | Checkbox left, swatch right; swatch disabled when unchecked |
@@ -100,6 +101,10 @@ Reuse these classes; do not invent new ones for the same job.
   where each value is published.
 - **Confirm before destroying.** `data-confirm` on a form triggers a
   `window.confirm` (see `admin.js`); destructive buttons use `--danger`.
+- **The short-link field is a normal field, not a separate section.** It sits in
+  the link editor next to Text and URL, with the site prefix in the label
+  (`Short link (optional, example.com/)`) and the availability message in
+  `.admin-field-hint`, so the editor keeps one save path ("Save link").
 
 ## Public page
 

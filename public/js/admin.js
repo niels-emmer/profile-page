@@ -434,3 +434,101 @@ document.addEventListener('change', async (event) => {
     input.value = '';
   }
 });
+
+/* ------------------------------ short links ----------------------------- */
+
+// Check a short-link slug with the server on blur and before saving. The server
+// stays authoritative (it validates again on save); this just gives immediate
+// feedback and blocks an obviously unavailable slug.
+document.querySelectorAll('input[data-shortlink-check]').forEach((input) => {
+  const form = input.closest('form');
+  const status = form?.querySelector('[data-shortlink-status]');
+  const checkUrl = input.dataset.shortlinkCheck;
+  const fallback = input.dataset.shortlinkDefault || '';
+  let checked = '';
+  let submitting = false;
+
+  const setStatus = (message, isError) => {
+    if (status === undefined || status === null) return;
+    status.textContent = message;
+    status.classList.toggle('admin-field-hint--error', isError);
+  };
+
+  const normalize = () => {
+    const slug = input.value.trim().toLowerCase();
+    if (input.value !== slug) input.value = slug;
+    return slug;
+  };
+
+  /** Returns 'ok', 'invalid', or 'unknown' (network failure). */
+  const check = async () => {
+    const slug = normalize();
+    input.setCustomValidity('');
+    if (slug.length === 0) {
+      checked = '';
+      setStatus(fallback, false);
+      return 'ok';
+    }
+
+    const params = new URLSearchParams({ slug });
+    const idField = form?.querySelector('[name="id"]');
+    if (idField !== null && idField !== undefined && idField.value.length > 0) {
+      params.set('id', idField.value);
+    }
+
+    try {
+      const response = await fetch(`${checkUrl}?${params}`, {
+        headers: { accept: 'application/json' },
+      });
+      const result = await response.json();
+      if (response.ok && result.available === true) {
+        checked = slug;
+        setStatus(`${result.slug} is available.`, false);
+        return 'ok';
+      }
+      checked = '';
+      const message =
+        typeof result.error === 'string' ? result.error : 'That short link is not available.';
+      input.setCustomValidity(message);
+      setStatus(message, true);
+      return 'invalid';
+    } catch {
+      // Do not block saving when the check itself cannot run; the save route
+      // validates the slug again.
+      checked = '';
+      setStatus('Could not check the short link; it will be checked on save.', true);
+      return 'unknown';
+    }
+  };
+
+  input.addEventListener('input', () => {
+    checked = '';
+    input.setCustomValidity('');
+    setStatus(fallback, false);
+  });
+
+  input.addEventListener('blur', () => {
+    void check();
+  });
+
+  if (form === null) return;
+
+  form.addEventListener('submit', async (event) => {
+    if (submitting) return;
+    const slug = normalize();
+    if (slug.length === 0 || checked === slug) return;
+
+    event.preventDefault();
+    const result = await check();
+    if (result === 'invalid') return;
+    submitting = true;
+    try {
+      form.requestSubmit();
+    } finally {
+      // requestSubmit fires the submit event synchronously; clear the guard so
+      // a later attempt (for example after another field fails validation) is
+      // checked again.
+      submitting = false;
+    }
+  });
+});

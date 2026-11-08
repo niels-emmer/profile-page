@@ -44,6 +44,7 @@
       "text": "Example",
       "url": "https://example.com",
       "description": "A short note shown in the hover card. Supports **bold** and *italic*.",
+      "shortlink": "example",
       "newWindow": true,
       "iconType": "fa",
       "iconValue": "fa-solid fa-link",

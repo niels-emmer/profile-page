@@ -50,6 +50,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   uploads it, and fills the icon path field. Choosing **Font Awesome** shows a
   lookup link and the icon colour field. Only the fields for the selected icon
   type are shown.
+- **Short links**: every link can carry an optional slug (for example
+  `your-domain.com/matrix`) that redirects to its real target. The field lives
+  in the link editor, normalises to lowercase, and is checked on blur and again
+  on save; duplicates and reserved paths (`admin`, `login`, and the app's other
+  root routes) are rejected. The slug is stored on the link row, so editing or
+  clearing it frees the old value immediately and deleting the link frees it
+  too. While active, the public hover card's **Open:** footer shows and opens
+  the short link instead of the target. Existing databases gain the column
+  automatically via the same idempotent additive migration used for
+  descriptions.
 
 ### Changed
 

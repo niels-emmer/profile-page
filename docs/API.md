@@ -9,6 +9,7 @@ HTTP routes, the SQLite schema, and the seed-file format.
 |---|---|---|---|
 | `GET` | `/` | public | Rendered profile page (includes canonical, `theme-color`, schema.org `Person` JSON-LD, and the avatar QR-share modal) |
 | `GET` | `/health` | public | `200 ok` |
+| `GET` | `/<slug>` | public | Active short link: `302` to the link's URL (`Cache-Control: no-store`); `404` when no link owns the slug |
 | `GET` | `/robots.txt` | public | `text/plain`; allows the page, disallows `/admin` and `/login`, points at the sitemap |
 | `GET` | `/sitemap.xml` | public | `application/xml`; single-URL sitemap (with `lastmod`) for the canonical page |
 | `GET` | `/llms.txt` | public | `text/plain`; profile summary, identity facts, and links for LLM/agent crawlers |
@@ -19,6 +20,7 @@ HTTP routes, the SQLite schema, and the seed-file format.
 | `POST` | `/login` | public | Verify password; sets the session cookie; `302 /admin` |
 | `POST` | `/logout` | public | Clears the session cookie; `302 /login` |
 | `GET` | `/admin` | session | Admin editor |
+| `GET` | `/admin/shortlink/check` | session | Live short-link availability check (`slug`, optional `id`); returns JSON |
 | `POST` | `/admin/profile` | session + CSRF | Save the profile (name, tagline, description) |
 | `POST` | `/admin/identity` | session + CSRF | Save the identity facts (alternate name, job title, works for, alumni of, knows about, public email/phone) |
 | `POST` | `/admin/theme` | session + CSRF | Save the default theme mode, visitor toggle, and text colours (preserves favicon/background settings) |
@@ -42,6 +44,23 @@ HTTP routes, the SQLite schema, and the seed-file format.
 
 Unauthenticated requests to `/admin*` receive `302 /login`. Admin POSTs without a
 valid CSRF token receive `403`. Invalid input redirects back to `/admin?error=...`.
+
+## Short links
+
+A link may carry one optional `shortlink` slug. While set, `GET /<slug>` responds
+`302` with `Cache-Control: no-store` to the link's URL. Slugs are 1–32 characters
+of lowercase letters, digits, and inner hyphens (input is trimmed and lowercased),
+must be unique across links, and may not be `admin`, `login`, `logout`, `health`,
+or `assets` so they never shadow an app route. A 302 rather than a 301 is
+deliberate: the owner can change the target or clear the slug.
+
+There is no separate short-link table or admin section. The slug lives on the
+link row, so editing or clearing it — or deleting the link — frees it
+immediately. `GET /admin/shortlink/check?slug=...` (add `&id=...` while editing)
+returns `{"slug":"...","available":true}` or
+`{"slug":"...","available":false,"error":"..."}`; the save route validates again.
+While active, the public hover card's `Open:` footer shows and opens the short
+link instead of the real target.
 
 ## Contact and discovery endpoints
 
@@ -101,6 +120,7 @@ SQLite, opened with WAL mode and foreign keys on. Created on first run.
 | `text` | TEXT | Button label |
 | `url` | TEXT | `http(s)` only |
 | `description` | TEXT | Optional "more info" (max 2000 chars); a small markdown subset, shown in the public-page hover card |
+| `shortlink` | TEXT NULL | Optional lowercase slug; NULL when inactive. Unique across links (partial unique index). |
 | `new_window` | INTEGER | 0/1 |
 | `icon_type` | TEXT | `fa` or `image` |
 | `icon_value` | TEXT | Font Awesome class, or an image path |
@@ -117,6 +137,12 @@ checks `PRAGMA table_info(links)` and runs
 `ALTER TABLE links ADD COLUMN description TEXT NOT NULL DEFAULT ''` only when
 the column is missing, so an existing database keeps every link with an empty
 description. See [ADR-015](governance/decisions.md#adr-015-safe-markdown-subset-for-link-descriptions-and-a-css-hover-card).
+
+`shortlink` uses the same additive migration (adding a nullable `TEXT` column)
+and then creates a partial unique index (`WHERE shortlink IS NOT NULL`), so an
+older database keeps every link without a short link and two links can never
+claim the same slug. See
+[ADR-016](governance/decisions.md#adr-016-short-links-live-on-the-link-row).
 
 ### `settings` (key/value)
 
@@ -228,6 +254,7 @@ idempotent and never overwrites existing content.
     {
       "text": "Example", "url": "https://example.com", "newWindow": true,
       "description": "**Now shipping** — a short note shown in the hover card.",
+      "shortlink": "example",
       "iconType": "fa", "iconValue": "fa-solid fa-link", "iconColor": null,
       "textColor": "#ffffff", "colorMode": "solid",
       "colorFrom": "#0085ff", "colorTo": "#0085ff", "borderColor": null
@@ -238,12 +265,14 @@ idempotent and never overwrites existing content.
 
 Image paths in a seed file refer to files under `DATA_DIR/uploads/`; the JSON and
 the uploads must travel together. `backgroundImageDark` / `backgroundImageLight`,
-`ogImagePath`, `defaultMode`, `visitorToggle`, a link's `description`, and the
-whole `entity` object are optional: older seed files without them are filled in
-with the defaults above (`entity` defaults to every field empty and a missing
-link description to an empty string). A non-string link `description` is
-rejected, and the text is normalised (CRLF to LF, control characters dropped)
-and capped at 2000 characters.
+`ogImagePath`, `defaultMode`, `visitorToggle`, a link's `description` and
+`shortlink`, and the whole `entity` object are optional: older seed files without
+them are filled in with the defaults above (`entity` defaults to every field
+empty, a missing link description to an empty string, and a missing short link to
+`null`). A non-string link `description` or `shortlink` is rejected, and the
+description is normalised (CRLF to LF, control characters dropped) and capped at
+2000 characters. A short link is trimmed/lowercased, and the seed is rejected if
+it is malformed, reserved, or duplicated across links.
 
 ## Backup archive format
 
