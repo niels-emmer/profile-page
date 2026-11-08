@@ -118,6 +118,13 @@ const AVATAR_BODY_LIMIT = 6 * 1024 * 1024;
 const IMAGE_BODY_LIMIT = 6 * 1024 * 1024;
 const BACKGROUND_BODY_LIMIT = MAX_BACKGROUND_BYTES + 1024 * 1024;
 
+/**
+ * Cap every urlencoded form that only carries text. `parseBody()` buffers the
+ * whole request, so without this an authenticated client could make the server
+ * hold an arbitrarily large body. Multipart routes set their own larger cap.
+ */
+const formLimit = bodyLimit({ maxSize: TEXT_BODY_LIMIT });
+
 export function createApp(deps: AppDeps): Hono {
   const { config, db, auth } = deps;
   const publicDir = deps.publicDir ?? './public';
@@ -386,7 +393,7 @@ export function createApp(deps: AppDeps): Hono {
     return c.html(renderLoginPage(ensureCsrf(c), 'Incorrect password.'), 401);
   });
 
-  app.post('/logout', async (c) => {
+  app.post('/logout', formLimit, async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
     setCookie(c, SESSION_COOKIE, '', {
@@ -399,7 +406,7 @@ export function createApp(deps: AppDeps): Hono {
     return c.redirect('/login');
   });
 
-  app.post('/admin/password', async (c) => {
+  app.post('/admin/password', formLimit, async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
 
@@ -435,7 +442,7 @@ export function createApp(deps: AppDeps): Hono {
     return c.html(renderSetPasswordPage(ensureCsrf(c), error));
   });
 
-  app.post('/admin/set-password', async (c) => {
+  app.post('/admin/set-password', formLimit, async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
     // Only reachable while the bootstrap password is still in use.
@@ -477,7 +484,7 @@ export function createApp(deps: AppDeps): Hono {
     );
   });
 
-  app.post('/admin/profile', async (c) => {
+  app.post('/admin/profile', formLimit, async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
 
@@ -491,7 +498,7 @@ export function createApp(deps: AppDeps): Hono {
     return c.redirect('/admin?ok=1');
   });
 
-  app.post('/admin/identity', bodyLimit({ maxSize: TEXT_BODY_LIMIT }), async (c) => {
+  app.post('/admin/identity', formLimit, async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
 
@@ -519,7 +526,7 @@ export function createApp(deps: AppDeps): Hono {
     return c.redirect('/admin?ok=1');
   });
 
-  app.post('/admin/theme', async (c) => {
+  app.post('/admin/theme', formLimit, async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
 
@@ -528,13 +535,15 @@ export function createApp(deps: AppDeps): Hono {
     // be preserved.
     const current = getTheme(db);
     const mode = formField(body, 'defaultMode');
+    const textDark = formField(body, 'textDark').trim();
+    const textLight = formField(body, 'textLight').trim();
     const accent = formField(body, 'accentColor').trim();
     saveTheme(db, {
       ...current,
       defaultMode: isThemeMode(mode) ? mode : current.defaultMode,
       visitorToggle: formField(body, 'visitorToggle') === 'on',
-      textDark: formField(body, 'textDark').trim() || current.textDark,
-      textLight: formField(body, 'textLight').trim() || current.textLight,
+      textDark: isHexColor(textDark) ? textDark : current.textDark,
+      textLight: isHexColor(textLight) ? textLight : current.textLight,
       accentColor: isHexColor(accent) ? accent : current.accentColor,
     });
     return c.redirect('/admin?ok=1');
@@ -577,7 +586,7 @@ export function createApp(deps: AppDeps): Hono {
     return c.redirect('/admin?ok=1');
   });
 
-  app.post('/admin/favicon/remove', async (c) => {
+  app.post('/admin/favicon/remove', formLimit, async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
     const theme = getTheme(db);
@@ -605,7 +614,7 @@ export function createApp(deps: AppDeps): Hono {
     return c.redirect('/admin?ok=1');
   });
 
-  app.post('/admin/ogimage/remove', async (c) => {
+  app.post('/admin/ogimage/remove', formLimit, async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
     const theme = getTheme(db);
@@ -657,7 +666,7 @@ export function createApp(deps: AppDeps): Hono {
     return c.redirect('/admin?ok=1');
   });
 
-  app.post('/admin/background/remove', async (c) => {
+  app.post('/admin/background/remove', formLimit, async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
     const slot = themeSlot(formField(body, 'theme'));
@@ -671,7 +680,7 @@ export function createApp(deps: AppDeps): Hono {
     return c.redirect('/admin?ok=1');
   });
 
-  app.post('/admin/background/options', async (c) => {
+  app.post('/admin/background/options', formLimit, async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
 
@@ -730,7 +739,7 @@ export function createApp(deps: AppDeps): Hono {
     return c.json({ slug, available: true });
   });
 
-  app.post('/admin/links', async (c) => {
+  app.post('/admin/links', formLimit, async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
 
@@ -786,7 +795,7 @@ export function createApp(deps: AppDeps): Hono {
     return c.redirect('/admin?ok=1');
   });
 
-  app.post('/admin/links/:id/delete', async (c) => {
+  app.post('/admin/links/:id/delete', formLimit, async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
     const id = Number.parseInt(c.req.param('id'), 10);
@@ -794,7 +803,7 @@ export function createApp(deps: AppDeps): Hono {
     return c.redirect('/admin?ok=1');
   });
 
-  app.post('/admin/links/reorder', async (c) => {
+  app.post('/admin/links/reorder', formLimit, async (c) => {
     const body = await c.req.parseBody();
     if (!csrfOk(c, formField(body, 'csrf'))) return c.text('Invalid CSRF token', 403);
 

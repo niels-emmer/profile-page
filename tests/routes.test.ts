@@ -232,6 +232,51 @@ test('admin POSTs reject a missing CSRF token', async (t) => {
   assert.equal(res.status, 403);
 });
 
+test('text form routes reject an oversized body before parsing it', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+
+  const admin = await ctx.app.request('/admin/profile', {
+    method: 'POST',
+    headers: { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS },
+    body: formBody({ csrf, name: 'x'.repeat(70 * 1024) }),
+  });
+  assert.equal(admin.status, 413);
+
+  const logout = await ctx.app.request('/logout', {
+    method: 'POST',
+    headers: FORM_HEADERS,
+    body: `csrf=x&pad=${'a'.repeat(70 * 1024)}`,
+  });
+  assert.equal(logout.status, 413);
+});
+
+test('admin theme ignores non-hex text colours', async (t) => {
+  const ctx = makeTestApp();
+  t.after(() => ctx.cleanup());
+  const { csrf, session } = await login(ctx.app);
+  const before = getTheme(ctx.db);
+
+  const res = await ctx.app.request('/admin/theme', {
+    method: 'POST',
+    headers: { cookie: `session=${session}; csrf=${csrf}`, ...FORM_HEADERS },
+    body: formBody({
+      csrf,
+      defaultMode: 'dark',
+      textDark: 'red; background: url(https://evil.example)',
+      textLight: '#abcdef',
+      accentColor: '#0085ff',
+    }),
+  });
+  assert.equal(res.status, 302);
+
+  const theme = getTheme(ctx.db);
+  assert.equal(theme.textDark, before.textDark);
+  assert.equal(theme.textLight, '#abcdef');
+  assert.equal(theme.defaultMode, 'dark');
+});
+
 test('admin can edit the profile and it appears on the public page', async (t) => {
   const ctx = makeTestApp();
   t.after(() => ctx.cleanup());
