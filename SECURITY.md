@@ -64,6 +64,12 @@ network, with no published ports. It does not implement TLS itself.
   assets are never touched.
 - **Background options** — size, position, repeat, and attachment are validated
   against fixed enums, so no user-supplied string reaches the stylesheet.
+- **Short links** — a slug is 1–32 lowercase letters, digits, or inner hyphens;
+  it must be unique and may not equal an app route (`admin`, `login`, `logout`,
+  `health`, `assets`). `GET /<slug>` redirects (`302`, `Cache-Control: no-store`)
+  only while the slug is active and only to a target that passes `isHttpUrl`;
+  otherwise it falls through to the normal 404. The target is owner-controlled
+  and already public as a link, so this adds no open-redirect surface.
 - **Path traversal** — `/assets/uploads/*` is guarded by an explicit check that
   decodes the path and rejects `..`, NUL, and backslashes, on top of the static
   handler's own guard.

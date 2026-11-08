@@ -53,7 +53,10 @@ Run **`npm run typecheck` and `npm test`** before considering any change done.
    file (`script-src 'self'`).
 6. **Theme settings** use the `settings` key/value table — no migration needed.
 7. **Keep the container hardened**: non-root, read-only rootfs, no published ports.
-8. **Branch → PR → CI → merge.** Never push to `main` directly. One concern per
+8. **Short links never shadow app routes.** A slug is a root-level path; any new
+   plain top-level route must be added to `RESERVED_SHORTLINKS` in
+   `src/validate.ts`.
+9. **Branch → PR → CI → merge.** Never push to `main` directly. One concern per
    commit, Conventional Commits.
 
 The full list, with rationale, is in
@@ -62,7 +65,8 @@ The full list, with rationale, is in
 ## When you change something
 
 - **A new route** → `src/app.ts` (rendering in `src/render.ts`, data in `src/db.ts`,
-  validation in `src/validate.ts`).
+  validation in `src/validate.ts`). A new plain top-level `GET` route must also be
+  added to `RESERVED_SHORTLINKS` so a link short link cannot shadow it.
 - **A new theme setting** → `types.ts` + `defaults.ts` + `db.ts` + the admin form +
   `seed-file.ts`. No migration.
 - **New UI** → reuse the existing `admin-*` classes; tokens, not literals. See

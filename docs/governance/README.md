@@ -40,6 +40,8 @@ The rules you will most often need, at a glance:
   parameterised SQL, `isHttpUrl`, `isSafeAssetRef`.
 - **No inline scripts.** New client behaviour is an external file in `public/js/`.
 - **Theme settings** go in the `settings` key/value table — no migration.
+- **Short links never shadow app routes.** Add every new plain top-level route to
+  `RESERVED_SHORTLINKS` in `src/validate.ts`.
 - **The container stays hardened.** No published ports, non-root, read-only rootfs.
 - **`npm run typecheck` and `npm test` must pass.**
 - **Branch → PR → CI → merge.** Never push to `main` directly.

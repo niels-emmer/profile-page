@@ -39,7 +39,8 @@ src/
   defaults.ts   DEFAULT_PROFILE / DEFAULT_BACKGROUND / DEFAULT_THEME / DEFAULT_LINKS / DEFAULT_SEED
   types.ts      domain types: Profile, Link, NewLink, ThemeSettings, BackgroundSettings, ThemeMode, SeedFile
   auth.ts       scrypt hashing, HMAC session tokens, CSRF, RateLimiter, ensureAuth, isDefaultPassword
-  validate.ts   shared input validation (URLs, asset refs, enums, hex colours, opacity)
+  validate.ts   shared input validation (URLs, asset refs, enums, hex colours, opacity,
+                short-link slugs and reserved paths)
   render.ts     renderProfilePage, renderLoginPage, renderSetPasswordPage, renderAdminPage, discovery files,
                 escapeHtml (re-exported), sanitizeCss, backgroundValue (per-theme layered background)
   html.ts       escapeHtml, shared by the page and markdown renderers
@@ -200,7 +201,9 @@ image over a solid colour is achieved. See
 ## Extension points
 
 **Add a route** — register it in `src/app.ts`. Put any rendering in `render.ts`,
-any data access in `db.ts`, any validation in `validate.ts`.
+any data access in `db.ts`, any validation in `validate.ts`. If it is a plain
+top-level `GET` path, also add it to `RESERVED_SHORTLINKS` so a link short link
+cannot shadow it (invariant 16).
 
 **Add a theme setting** — add it to `ThemeSettings` (`types.ts`) and a default in
 `defaults.ts`; read/write it in `getTheme`/`saveTheme`; expose it in the admin

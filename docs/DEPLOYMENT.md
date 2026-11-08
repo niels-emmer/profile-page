@@ -50,6 +50,10 @@ The app reads the **last** `X-Forwarded-For` entry for rate limiting. Setting th
 header with `$remote_addr` (rather than `$proxy_add_x_forwarded_for`) is the
 safest configuration.
 
+Short links resolve at the site root (`/<slug>`), so keep `location /` proxying
+to the app as above. Do not add a catch-all rewrite that takes single-segment
+paths away from it.
+
 ## Configuration
 
 All configuration is via environment variables (see `.env.example`).
@@ -95,8 +99,8 @@ host and start the container.
 `/admin` has a **Backup & restore** section:
 
 - **Download backup** produces a `.tar.gz` containing `seed.json` (profile,
-  theme, links) and every file in `uploads/` — including an uploaded favicon and
-  background images.
+  theme, identity, links including active short links) and every file in
+  `uploads/` — including an uploaded favicon and background images.
 - **Restore backup** accepts such an archive, validates it fully, then replaces
   the profile, theme, links, and uploaded images. Backups made before background
   images existed still restore: missing background fields fall back to defaults.
@@ -121,9 +125,10 @@ docker compose up -d --build
 On startup the schema is created if missing. **Additive** schema changes are
 applied automatically: `openDatabase` checks `PRAGMA table_info` and runs
 `ALTER TABLE … ADD COLUMN … DEFAULT …` only when a column is absent (for example
-`links.description` added for link "more info" text). Existing rows keep working
-with the default value, so an upgrade does not need a database reset. Back up
-`data/` before upgrading anyway.
+`links.description` for link "more info" text and `links.shortlink` for short
+links). The short-link partial unique index is created on boot as well. Existing
+rows keep working with the new columns empty, so an upgrade does not need a
+database reset. Back up `data/` before upgrading anyway.
 
 Seeding is idempotent: once a profile exists, nothing is touched, so your edits
 (including deleting every link) survive restarts.

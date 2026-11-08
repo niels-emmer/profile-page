@@ -73,10 +73,13 @@ Notes:
 - `src/server.ts` split into `src/app.ts` (testable `createApp` factory) + a thin
   `src/server.ts` bootstrap. Shared validation moved to `src/validate.ts`; seed
   loading moved to `src/seed-file.ts`. 49 tests pass via `npm test`.
-- **Known gap:** no schema migration. `CREATE TABLE IF NOT EXISTS` does not add
-  columns to an existing database, so an older `profile.db` breaks on a schema
-  change. Documented in `docs/DEPLOYMENT.md` (reset + re-seed). A lightweight
-  `ALTER TABLE ADD COLUMN` migration is a candidate follow-up.
+- **Migration gap at the time:** `CREATE TABLE IF NOT EXISTS` does not add
+  columns to an existing database, so an older `profile.db` broke on a schema
+  change. **Resolved:** `migrateSchema` now performs idempotent additive
+  `ALTER TABLE` migrations (see [ADR-015](governance/decisions.md#adr-015-safe-markdown-subset-for-link-descriptions-and-a-css-hover-card)
+  and [ADR-016](governance/decisions.md#adr-016-short-links-live-on-the-link-row));
+  destructive column changes still require a reset path as documented in
+  [DEPLOYMENT.md](DEPLOYMENT.md).
 
 Reviewer findings addressed:
 - `/logout` now enforces CSRF (was missing).
@@ -151,6 +154,26 @@ Admin panel feature (not in the original plan):
 
 ---
 
+## Added after Phase 8 — Short links
+
+Per-link shareable slugs (not in the original plan):
+
+- `links.shortlink`: nullable, normalised to lowercase, unique via a partial
+  unique index, and added through the same idempotent additive migration as
+  `links.description`.
+- Inline editor field in the link card; `GET /admin/shortlink/check` powers the
+  blur check, and `POST /admin/links` re-validates format, reserved paths, and
+  uniqueness.
+- `GET /<slug>` redirects `302` (`Cache-Control: no-store`) to the link's URL.
+  Reserved paths (`admin`, `login`, `logout`, `health`, `assets`) cannot be used.
+- Editing, clearing, or deleting a link frees its slug; the public hover card's
+  `Open:` footer shows the short link while active.
+- Seed/backup validation rejects malformed, reserved, and duplicate slugs. Tests
+  cover the redirect lifecycle, uniqueness, reserved names, and seed/backup
+  round-trips.
+
+---
+
 ## Generalisation for public release
 
 The personal profile data was removed from the repo (it lives only in the
@@ -169,5 +192,6 @@ gitignored `data/` directory and in the owner's downloaded backup). In its place
 
 ## Status: all phases complete
 
-Phases 1-8 are done and verified. Remaining known gap: no schema migration
-(see the Phase 7 note).
+Phases 1-8 are done and verified. Additive schema migrations are in place for
+`links.description` and `links.shortlink`; destructive column changes still need
+the documented reset path (see [DEPLOYMENT.md](DEPLOYMENT.md)).
