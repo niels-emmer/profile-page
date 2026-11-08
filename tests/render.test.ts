@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import {
   backgroundValue,
@@ -162,24 +163,24 @@ test('renderProfilePage renders a hover card with icon, title, description, and 
     theme,
     baseUrl: 'https://example.com',
   });
-  assert.match(html, /class="button-entrance link-item"/);
-  assert.match(html, /<div class="link-card">/);
-  assert.match(html, /class="icon hvr-icon link-card-icon fa-brands fa-github"/);
-  assert.match(html, /<span class="link-card-title">GitHub<\/span>/);
+  assert.match(html, /class="button-entrance link-hover-item"/);
+  assert.match(html, /<div class="link-hover-card">/);
+  assert.match(html, /class="icon hvr-icon link-hover-icon fa-brands fa-github"/);
+  assert.match(html, /<span class="link-hover-title">GitHub<\/span>/);
   assert.match(
     html,
-    /<div class="link-card-description"><p><strong>Bold<\/strong> note<\/p><\/div>/,
+    /<div class="link-hover-description"><p><strong>Bold<\/strong> note<\/p><\/div>/,
   );
   assert.match(
     html,
-    /<a class="link-card-go" rel="noopener noreferrer nofollow noindex" href="https:\/\/github\.com\/example" target="_blank">GO<\/a>/,
+    /<a class="link-hover-go" rel="noopener noreferrer nofollow noindex" href="https:\/\/github\.com\/example" target="_blank">GO<\/a>/,
   );
 });
 
 test('renderProfilePage keeps the card but omits an empty description', () => {
   const html = renderProfilePage({ profile, links: [link], theme, baseUrl: 'https://example.com' });
-  assert.match(html, /<div class="link-card">/);
-  assert.doesNotMatch(html, /link-card-description/);
+  assert.match(html, /<div class="link-hover-card">/);
+  assert.doesNotMatch(html, /link-hover-description/);
   assert.match(html, />GO<\/a>/);
 });
 
@@ -483,6 +484,26 @@ test('renderAdminPage renders the link description as an escaped textarea', () =
   );
   // Profile description + link editor + add-link form.
   assert.equal(html.match(/name="description"/g)?.length, 3);
+});
+
+test('renderAdminPage keeps the link editor cards visible (admin .link-card)', () => {
+  const html = renderAdminPage({
+    profile,
+    links: [link],
+    theme,
+    csrfToken: 'token-123',
+    saved: false,
+    passwordManagedByEnv: false,
+  });
+  assert.match(html, /<details class="link-card" data-id="1">/);
+  assert.match(html, /class="link-title">GitHub<\/span>/);
+});
+
+test('the public stylesheet does not reuse the admin .link-card class', () => {
+  const css = readFileSync(new URL('../public/css/style.css', import.meta.url), 'utf8');
+  // The admin loads this stylesheet too; a bare .link-card rule would hide its
+  // <details class="link-card"> editors. Public hover-card classes are namespaced.
+  assert.doesNotMatch(css, /\.link-card\b/);
 });
 
 test('renderAdminPage includes the identity section', () => {  const html = renderAdminPage({

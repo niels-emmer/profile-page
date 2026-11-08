@@ -120,15 +120,17 @@ Variables set per request in a `<style>` block emitted by `render.ts`:
 - **Buttons** — 300px wide, 8px radius, `linear-gradient(45deg, from, to)` per
   link, a `border` when a border colour is set. Hover scales to `1.1` and animates
   the icon (`icon-hover`).
-- **Link hover cards** — each button is wrapped in a positioned `.link-item` with
-  a sibling overlay card: the icon at 2.5rem, the title, the rendered "more info"
-  description, and a `GO` CTA. It appears on hover and keyboard focus only under
-  `@media (hover: hover)`, so touch devices keep plain tap-to-open. The overlay is
-  absolutely positioned (no layout shift); the card uses an opaque theme-following
-  surface plus `--fg`/`--accent`, caps its width to the viewport and its
-  description height, and raises the hovered row's `z-index` above the next
-  button. Long descriptions scroll inside the card; reduced-motion drops the
-  transition.
+- **Link hover cards** — each button is wrapped in a positioned `.link-hover-item`
+  with a sibling overlay card (`.link-hover-card`): the icon at 2.5rem, the title,
+  the rendered "more info" description, and a `GO` CTA. It appears on hover and
+  keyboard focus only under `@media (hover: hover)`, so touch devices keep plain
+  tap-to-open. The overlay is absolutely positioned (no layout shift); the card
+  uses an opaque theme-following surface plus `--fg`/`--accent`, caps its width to
+  the viewport and its description height, and raises the hovered row's `z-index`
+  above the next button. Long descriptions scroll inside the card; reduced-motion
+  drops the transition. Public hover-card classes are namespaced `link-hover-*`:
+  the admin loads this stylesheet too, so never reuse the admin `.link-card` name
+  (doing so hid every link editor in the admin panel).
 - **Entrance animations** — `.button-entrance` (`popUp`, staggered via `--delay`)
   and `.fadein`. Both are disabled under `prefers-reduced-motion: reduce`.
 - **Theme switcher** — when the owner enables visitor selection, a single
