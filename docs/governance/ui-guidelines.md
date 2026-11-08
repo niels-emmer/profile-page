@@ -106,9 +106,11 @@ Reuse these classes; do not invent new ones for the same job.
 Variables set per request in a `<style>` block emitted by `render.ts`:
 
 ```
---accent   the accent colour (theme.accentColor)
---bg       the composed background (colour/gradient/image+veil)
---fg       the text colour
+--accent     the accent colour (theme.accentColor)
+--accent-fg  black or white text chosen for legibility on --accent
+             (readableTextColor; used by the GO call to action)
+--bg         the composed background (colour/gradient/image+veil)
+--fg         the text colour
 ```
 
 - **Theme selection** — `:root[data-theme='dark'|'light']` wins; with no
@@ -125,10 +127,11 @@ Variables set per request in a `<style>` block emitted by `render.ts`:
   the rendered "more info" description, and a `GO` CTA. It appears on hover and
   keyboard focus only under `@media (hover: hover)`, so touch devices keep plain
   tap-to-open. The overlay is absolutely positioned (no layout shift); the card
-  uses an opaque theme-following surface plus `--fg`/`--accent`, caps its width to
-  the viewport and its description height, and raises the hovered row's `z-index`
-  above the next button. Long descriptions scroll inside the card; reduced-motion
-  drops the transition. Public hover-card classes are namespaced `link-hover-*`:
+  uses an opaque theme-following surface plus `--fg`/`--accent`/`--accent-fg`
+  (the readable GO foreground), caps its width to the viewport and its
+  description height, and raises the hovered row's `z-index` above the next
+  button. Long descriptions scroll inside the card; reduced-motion drops the
+  transition. Public hover-card classes are namespaced `link-hover-*`:
   the admin loads this stylesheet too, so never reuse the admin `.link-card` name
   (doing so hid every link editor in the admin panel).
 - **Entrance animations** — `.button-entrance` (`popUp`, staggered via `--delay`)
