@@ -21,6 +21,8 @@ SQLite schema, and the seed-file format.
 | `POST` | `/login` | public | Verify password; sets the session cookie; `302 /admin` |
 | `POST` | `/logout` | public | Clears the session cookie; `302 /login` |
 | `GET` | `/admin` | session | Admin editor |
+| `GET` | `/admin/set-password` | session | Forced first-password form; only while the bootstrap password is in use, otherwise `302 /admin` |
+| `POST` | `/admin/set-password` | session + CSRF | Set the first password (new + confirm; min 8 chars) while the bootstrap password is active. Rotates the session secret and re-issues the current session. |
 | `GET` | `/admin/shortlink/check` | session | Live short-link availability check (`slug`, optional `id`); returns JSON |
 | `POST` | `/admin/profile` | session + CSRF | Save the profile (name, tagline, description) |
 | `POST` | `/admin/identity` | session + CSRF | Save the identity facts (alternate name, job title, works for, alumni of, knows about, public email/phone) |
@@ -45,6 +47,10 @@ SQLite schema, and the seed-file format.
 
 Unauthenticated requests to `/admin*` receive `302 /login`. Admin POSTs without a
 valid CSRF token receive `403`. Invalid input redirects back to `/admin?error=...`.
+
+Every state-changing POST is size-capped before its body is read: text forms at
+64 KB, `/login` at 16 KB, image uploads at 6 MB, backgrounds at 9 MB, and backup
+restore at 51 MB. An over-limit request receives `413 Payload Too Large`.
 
 ## Short links
 
@@ -151,8 +157,12 @@ Theme values are stored under `theme.*` keys: `backgroundDark`, `backgroundLight
 `textDark`, `textLight`, `accentColor`, `faviconPath`, `ogImagePath`,
 `defaultMode`, `visitorToggle`, and, per colour scheme,
 `theme.backgroundImageDark.*` / `theme.backgroundImageLight.*` with the sub-keys
-`imagePath`, `size`, `position`, `repeat`, and `attachment`. Adding these keys
-needs no schema migration — `settings` is a key/value table.
+`imagePath`, `size`, `position`, `repeat`, `attachment`, `color`, and `opacity`.
+
+Identity facts use the same table under `entity.*` keys: `alternateName`,
+`jobTitle`, `worksFor`, `alumniOf`, `knowsAbout`, `email`, and `telephone`
+(`alumniOf` and `knowsAbout` are newline-separated). Adding either group needs no
+schema migration — `settings` is a key/value table.
 
 ### `auth` (single row, `id = 1`)
 

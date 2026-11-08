@@ -246,6 +246,7 @@ All configuration is via environment variables (see `.env.example`).
 |---|---|---|
 | `PORT` | `3000` | Listen port |
 | `DATA_DIR` | `./data` (`/data` in Docker) | SQLite database + uploads |
+| `ADMIN_PASSWORD` | *(unset)* | Optional: pin the admin password from the environment. When set it wins over a UI change on restart, which also signs out every session. Leave unset to manage the password from the UI. |
 | `PROXY_NETWORK` | `proxy-net` | External Docker network shared with your reverse proxy |
 | `SESSION_SECRET` | *(generated)* | Cookie signing secret. Generated and persisted if unset. |
 | `SECURE_COOKIES` | `true` in production | Adds the `Secure` flag to session cookies. Set `false` only for plain-HTTP local development. |
