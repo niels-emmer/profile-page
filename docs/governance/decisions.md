@@ -297,8 +297,9 @@ The editor checks availability on blur through
 `GET /admin/shortlink/check` and the save route validates again as the
 authoritative gate. There is no separate table, admin section, or short-link
 lifecycle: a slug exists only while it is set on a link, so editing, clearing,
-or deleting that link frees it immediately. While active, the public hover
-card's `Open:` footer shows and opens the short link instead of the target.
+or deleting that link frees it immediately. While active, the button and the
+public hover card's `Open:` footer show and open the short link instead of the
+target.
 
 **Consequences.** Short links cannot outlive their link, which removes the need
 for a maintenance screen. A 302 rather than a 301 is deliberate: both the target

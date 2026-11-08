@@ -56,9 +56,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   on save; duplicates and reserved paths (`admin`, `login`, and the app's other
   root routes) are rejected. The slug is stored on the link row, so editing or
   clearing it frees the old value immediately and deleting the link frees it
-  too. While active, the public hover card's **Open:** footer shows and opens
-  the short link instead of the target. Existing databases gain the column
-  automatically via the same idempotent additive migration used for
+  too. While active, the button and the public hover card's **Open:** footer
+  show and open the short link instead of the target. Existing databases gain
+  the column automatically via the same idempotent additive migration used for
   descriptions.
 
 ### Changed

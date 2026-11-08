@@ -195,19 +195,22 @@ test('the hover-card open link drops http and https schemes', () => {
   assert.match(http, /Open: <a [^>]*>teamrockstars\.nl<\/a>/);
 });
 
-test('the hover-card open link uses an active short link', () => {
+test('an active short link is used by the button and the hover card', () => {
   const html = renderProfilePage({
     profile,
     links: [{ ...link, shortlink: 'matrix' }],
     theme,
     baseUrl: 'https://example.com',
   });
-  // The footer shows and opens the short link; the button keeps the real target.
+  // The button and the footer both open and show the short link.
+  assert.match(
+    html,
+    /<a class="button button-hover icon-hover" style="[^"]*" rel="noopener noreferrer nofollow noindex" href="https:\/\/example\.com\/matrix" target="_blank">/,
+  );
   assert.match(
     html,
     /<span class="link-hover-open">Open: <a rel="noopener noreferrer nofollow noindex" href="https:\/\/example\.com\/matrix" target="_blank">example\.com\/matrix<\/a><\/span>/,
   );
-  assert.match(html, /href="https:\/\/github\.com\/example"/);
 });
 
 test('renderProfilePage escapes hostile link descriptions', () => {
