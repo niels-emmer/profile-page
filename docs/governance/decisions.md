@@ -253,10 +253,12 @@ existing anchor and a **sibling** card (never a nested anchor) with the icon at
 double size, the title, the rendered description, and a real `GO` anchor that
 reuses the link's URL, target, and rel attributes. The card is an absolute
 overlay revealed by `:hover` / `:focus-within` inside `@media (hover: hover)`
-only, so touch devices never get a stuck card and tapping still navigates. It
-uses the page's `--fg`/`--accent` variables plus neutral translucent surfaces, so
-no new tokens are needed; the overlay causes no layout shift, and `height`/
-`width` caps keep long descriptions and small viewports usable.
+only, so touch devices never get a stuck card and tapping still navigates. The
+hovered row raises its `z-index`, so the card is never painted under the next
+button. It uses the page's `--fg`/`--accent` variables plus an opaque surface
+that follows the theme (like the QR modal), so no new tokens are needed; the
+overlay causes no layout shift, and `height`/`width` caps keep long descriptions
+and small viewports usable.
 
 **Consequences.** Descriptions look formatted without any new dependency, and
 the escape-then-format order means no user text can reach an HTML attribute or
