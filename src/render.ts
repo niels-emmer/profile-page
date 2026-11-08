@@ -167,27 +167,14 @@ function renderLink(link: Link, index: number, baseUrl: string): string {
   // The footer link shows the target without its scheme, matching the QR
   // modal's URL treatment ("Open: example.com"). A short link replaces it.
   const displayUrl = (shortUrl ?? link.url).replace(/^https?:\/\//i, '');
-  // The touch sheet is a CSS :target dialog (the same pattern as the QR modal),
-  // so it opens and closes without JS. The trigger lives beside the button, not
-  // inside it, and is hidden on hover-capable devices.
-  const cardId = `link-more-${link.id}`;
-  const detailsLabel = `More information about ${link.text}`;
   return (
-    `<div style="--delay: ${index + 1}s" class="link-hover-item">` +
-    `<div class="button-entrance">` +
-    `<span class="link-button-wrap">` +
+    `<div style="--delay: ${index + 1}s" class="button-entrance link-hover-item">` +
     `<a class="button button-hover icon-hover" style="color: ${sanitizeCss(link.textColor)}; background-image: ${background};${border}" ${href}>${linkIcon(link)}${escapeHtml(link.text)}</a>` +
-    `<a class="link-more-trigger" href="#${cardId}" style="color: ${sanitizeCss(link.textColor)}" aria-label="${escapeHtml(detailsLabel)}"><span aria-hidden="true">*</span></a>` +
-    `</span>` +
-    `</div>` +
-    `<div class="link-hover-card" id="${cardId}" role="dialog" aria-label="${escapeHtml(detailsLabel)}" tabindex="-1">` +
-    `<a class="link-more-close" href="#" aria-label="Close link details"><i class="fa-solid fa-xmark" aria-hidden="true"></i></a>` +
+    `<div class="link-hover-card">` +
     `<div class="link-hover-head">${linkIcon(link, 'link-hover-icon', false)}<span class="link-hover-title">${escapeHtml(link.text)}</span></div>` +
     descriptionMarkup +
     `<span class="link-hover-open">Open: <a ${href}>${escapeHtml(displayUrl)}</a></span>` +
-    `<a class="link-more-open" style="color: ${sanitizeCss(link.textColor)}; background-image: ${background};${border}" ${href}>Open ${escapeHtml(displayUrl)}</a>` +
     `</div>` +
-    `<a class="link-more-backdrop" href="#" tabindex="-1" aria-label="Close link details"></a>` +
     `</div>`
   );
 }
@@ -328,7 +315,6 @@ ${links.map((link) => `<link rel="me" href="${escapeHtml(link.url)}">`).join('\n
 ${themeStyle}
 ${theme.visitorToggle ? '<script src="/assets/js/theme.js"></script>' : ''}
 ${qrSvg !== null ? '<script src="/assets/js/qr.js" defer></script>' : ''}
-${links.length > 0 ? '<script src="/assets/js/link-more.js" defer></script>' : ''}
 <script type="application/ld+json">${jsonLd}</script>
 </head>
 <body>

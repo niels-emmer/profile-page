@@ -56,9 +56,7 @@ footprint, and your data stays on your own disk.
   hover-capable device the button reveals a card with the icon at double size,
   the title, the description, and a footer with plain **Open:** text followed by
   the URL as a link (without the scheme, dashed underline turning solid on
-  hover). On touch devices a small **\*** button in the link's top-right corner
-  opens the same card as a bottom sheet, so tapping the link itself still opens
-  it.
+  hover); touch devices keep plain tap-to-open.
 - **Short links** — give any link a short slug (for example
   `your-domain.com/matrix`) right in its editor. The slug redirects to the real
   target, is checked for availability as you leave the field (and again on

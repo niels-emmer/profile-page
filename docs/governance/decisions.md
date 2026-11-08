@@ -257,8 +257,8 @@ existing anchor and a **sibling** card (never a nested anchor) with the icon at
 double size, the title, the rendered description, and a footer with plain
 `Open:` text followed by a real anchor for the URL (without its scheme) that
 reuses the link's URL, target, and rel attributes. The card is an absolute overlay revealed by `:hover` /
-`:focus-within` inside `@media (hover: hover)` only. ADR-017 adds a touch-only
-asterisk trigger and bottom sheet; tapping the link itself still navigates. To keep the card reachable it appears
+`:focus-within` inside `@media (hover: hover)` only, so touch devices never get
+a stuck card and tapping still navigates. To keep the card reachable it appears
 after a 0.6 s hover delay, lingers 0.8 s after the pointer leaves, and a
 transparent bridge spans the gap between the button and the card. The hovered
 row raises its `z-index`, so the card is never painted under the next button. It
@@ -314,6 +314,8 @@ restore cannot introduce an invalid short link.
 
 ## ADR-017: Touch access to link details via an asterisk trigger and bottom sheet
 
+**Status: Superseded by [ADR-018](#adr-018-touch-devices-keep-plain-tap-to-open).**
+
 **Context.** ADR-015's link details card is revealed by hover or keyboard focus
 and is deliberately hidden on touch devices, where the button keeps navigating.
 That leaves touch users unable to read a link's description. Long-press — the
@@ -338,3 +340,27 @@ the description and destination. The cost is a touch-only per-link affordance
 and a separate public script (loaded only when links exist). If a future change
 adds another card action, both the hover footer and the sheet's full-width
 action must be kept in sync.
+
+**Superseded.** On a real phone the small marker still looked cluttered, so the
+touch trigger and sheet were removed in ADR-018.
+
+---
+
+## ADR-018: Touch devices keep plain tap-to-open
+
+**Context.** ADR-017 added a touch-only asterisk trigger and bottom sheet so
+phone visitors could read link descriptions. On a real phone the marker still
+looked cluttered, and the extra sheet, backdrop, markup, and script were not
+worth the visual and maintenance cost.
+
+**Decision.** Remove the touch trigger, bottom sheet, backdrop, close and
+full-width actions, and `public/js/link-more.js`. The link details card remains
+desktop-only (`@media (hover: hover)`), with the existing delayed show/linger
+behaviour. Touch visitors tap the link directly; its destination is the active
+short link when one is set, otherwise the real URL.
+
+**Consequences.** The public page becomes simpler: no touch-only affordance,
+markup, styles, or script, and mobile returns to the original single
+tap-to-open interaction. Mobile visitors no longer see link descriptions, which
+is accepted. ADR-017 is superseded, and ADR-015's original touch behaviour is
+restored.

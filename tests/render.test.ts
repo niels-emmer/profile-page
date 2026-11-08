@@ -164,9 +164,8 @@ test('renderProfilePage renders a hover card with icon, title, description, and 
     theme,
     baseUrl: 'https://example.com',
   });
-  assert.match(html, /class="link-hover-item"/);
-  assert.match(html, /class="button-entrance"/);
-  assert.match(html, /<div class="link-hover-card"[^>]*>/);
+  assert.match(html, /class="button-entrance link-hover-item"/);
+  assert.match(html, /<div class="link-hover-card">/);
   assert.match(html, /class="icon hvr-icon link-hover-icon fa-brands fa-github"/);
   assert.match(html, /<span class="link-hover-title">GitHub<\/span>/);
   assert.match(
@@ -181,7 +180,7 @@ test('renderProfilePage renders a hover card with icon, title, description, and 
 
 test('renderProfilePage keeps the card but omits an empty description', () => {
   const html = renderProfilePage({ profile, links: [link], theme, baseUrl: 'https://example.com' });
-  assert.match(html, /<div class="link-hover-card"[^>]*>/);
+  assert.match(html, /<div class="link-hover-card">/);
   assert.doesNotMatch(html, /link-hover-description/);
   assert.match(html, /Open: <a [^>]*>github\.com\/example<\/a>/);
 });
@@ -212,41 +211,6 @@ test('an active short link is used by the button and the hover card', () => {
     html,
     /<span class="link-hover-open">Open: <a rel="noopener noreferrer nofollow noindex" href="https:\/\/example\.com\/matrix" target="_blank">example\.com\/matrix<\/a><\/span>/,
   );
-});
-
-test('renderProfilePage exposes the touch details trigger and sheet', () => {
-  const html = renderProfilePage({
-    profile,
-    links: [{ ...link, shortlink: 'matrix', description: 'More info' }],
-    theme,
-    baseUrl: 'https://example.com',
-  });
-  assert.match(html, /<span class="link-button-wrap">/);
-  assert.match(
-    html,
-    /<a class="link-more-trigger" href="#link-more-1" style="[^"]*" aria-label="More information about GitHub"><span aria-hidden="true">\*<\/span>/,
-  );
-  assert.match(
-    html,
-    /<div class="link-hover-card" id="link-more-1" role="dialog" aria-label="More information about GitHub" tabindex="-1">/,
-  );
-  assert.match(html, /<a class="link-more-close" href="#" aria-label="Close link details">/);
-  assert.match(
-    html,
-    /<a class="link-more-open" style="[^"]*" rel="noopener noreferrer nofollow noindex" href="https:\/\/example\.com\/matrix" target="_blank">Open example\.com\/matrix<\/a>/,
-  );
-  assert.match(
-    html,
-    /<a class="link-more-backdrop" href="#" tabindex="-1" aria-label="Close link details"><\/a>/,
-  );
-  assert.match(html, /<script src="\/assets\/js\/link-more\.js" defer><\/script>/);
-});
-
-test('renderProfilePage loads the touch details script only when links exist', () => {
-  const empty = renderProfilePage({ profile, links: [], theme, baseUrl: 'https://example.com' });
-  assert.doesNotMatch(empty, /link-more\.js/);
-  const withLink = renderProfilePage({ profile, links: [link], theme, baseUrl: 'https://example.com' });
-  assert.match(withLink, /link-more\.js/);
 });
 
 test('renderProfilePage escapes hostile link descriptions', () => {
@@ -589,16 +553,6 @@ test('the hover-card image icon plate is opaque for white brand marks', () => {
   // A translucent wash leaves white Simple Icons invisible on the white card;
   // the plate must be an opaque mid-tone.
   assert.match(css, /img\.link-hover-icon\s*\{[^}]*background:\s*#7f7f7f/);
-});
-
-test('the touch details sheet is gated by hover: none', () => {
-  const css = readFileSync(new URL('../public/css/style.css', import.meta.url), 'utf8');
-  assert.match(
-    css,
-    /@media \(hover: none\) \{[\s\S]*?\.link-more-trigger \{\s*display: grid;/,
-  );
-  assert.match(css, /\.link-hover-card:target \{[\s\S]*?position: fixed;/);
-  assert.match(css, /\.link-hover-card:target \+ \.link-more-backdrop \{\s*display: block;/);
 });
 
 test('renderAdminPage keeps the link editor cards visible (admin .link-card)', () => {
