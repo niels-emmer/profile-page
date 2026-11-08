@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Removed
+
+- **Touch link-details sheet**: removed the mobile asterisk trigger, bottom
+  sheet, backdrop, and `link-more.js`. Touch devices keep plain tap-to-open;
+  the link button opens the short link when set, otherwise the real target.
+  The desktop hover card is unchanged.
+
 ## [1.1.0] — 2026-11-08
 
 ### Added

@@ -8,7 +8,7 @@ SQLite schema, and the seed-file format.
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/` | public | Rendered profile page (includes canonical, `theme-color`, schema.org `Person` JSON-LD, the avatar QR-share modal, and the touch link-details sheet) |
+| `GET` | `/` | public | Rendered profile page (includes canonical, `theme-color`, schema.org `Person` JSON-LD, and the avatar QR-share modal) |
 | `GET` | `/health` | public | `200 ok` |
 | `GET` | `/<slug>` | public | Active short link: `302` to the link's URL (`Cache-Control: no-store`); `404` when no link owns the slug |
 | `GET` | `/robots.txt` | public | `text/plain`; allows the page, disallows `/admin` and `/login`, points at the sitemap |
