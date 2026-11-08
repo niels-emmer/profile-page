@@ -108,7 +108,7 @@ Variables set per request in a `<style>` block emitted by `render.ts`:
 ```
 --accent     the accent colour (theme.accentColor)
 --accent-fg  black or white text chosen for legibility on --accent
-             (readableTextColor; used by the GO call to action)
+             (readableTextColor; available to accent-filled surfaces)
 --bg         the composed background (colour/gradient/image+veil)
 --fg         the text colour
 ```
@@ -124,12 +124,15 @@ Variables set per request in a `<style>` block emitted by `render.ts`:
   the icon (`icon-hover`).
 - **Link hover cards** — each button is wrapped in a positioned `.link-hover-item`
   with a sibling overlay card (`.link-hover-card`): the icon at 2.5rem, the title,
-  the rendered "more info" description, and a `GO` CTA. It appears on hover and
-  keyboard focus only under `@media (hover: hover)`, so touch devices keep plain
-  tap-to-open. The overlay is absolutely positioned (no layout shift); the card
-  uses an opaque theme-following surface plus `--fg`/`--accent`/`--accent-fg`
-  (the readable GO foreground), caps its width to the viewport and its
-  description height, and raises the hovered row's `z-index` above the next
+  the rendered "more info" description, and a footer link reading
+  `Open: <url>` (the URL without its scheme, like the QR modal). It appears on
+  hover after a 0.6s delay and lingers 0.8s after the pointer leaves; an invisible
+  bridge over the gap lets the pointer travel from the button into the card.
+  Keyboard focus shows it immediately, and it is only revealed under
+  `@media (hover: hover)`, so touch devices keep plain tap-to-open. The overlay is
+  absolutely positioned (no layout shift); the card uses a slightly translucent,
+  blurred theme-following surface plus `--fg`, caps its width to the viewport and
+  its description height, and raises the hovered row's `z-index` above the next
   button. Long descriptions scroll inside the card; reduced-motion drops the
   transition. Public hover-card classes are namespaced `link-hover-*`:
   the admin loads this stylesheet too, so never reuse the admin `.link-card` name

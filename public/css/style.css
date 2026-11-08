@@ -439,26 +439,46 @@ button {
   box-sizing: border-box;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 12px;
-  background: #ffffff;
+  /* A slightly translucent surface (with a blur) lets the page show through
+     while keeping the copy readable. */
+  background: rgba(255, 255, 255, 0.9);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   color: var(--fg);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
   text-align: center;
   opacity: 0;
   visibility: hidden;
   transform: translate(-50%, 0.35rem);
+  /* The base state is the hidden state, so this delay sets how long the card
+     lingers after the pointer leaves. The hover state below uses a shorter
+     delay before it appears. */
   transition: opacity 0.15s, transform 0.15s, visibility 0.15s;
+  transition-delay: 0.8s;
+}
+
+/* Invisible bridge across the gap between the card and the button, so the
+   pointer can travel up into the card without leaving the row. It is part of
+   the card, so it only hit-tests while the card is visible. */
+.link-hover-card::before {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: 0.5rem;
+  content: '';
 }
 
 /* The card surface follows the page theme, like the QR modal panel. */
 :root[data-theme='dark'] .link-hover-card {
   border-color: rgba(255, 255, 255, 0.14);
-  background: #151826;
+  background: rgba(21, 24, 38, 0.9);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) .link-hover-card {
     border-color: rgba(255, 255, 255, 0.14);
-    background: #151826;
+    background: rgba(21, 24, 38, 0.9);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   }
 }
@@ -536,22 +556,21 @@ img.link-hover-icon {
   font-size: 0.9em;
 }
 
-.link-hover-go {
+.link-hover-open {
   display: inline-block;
+  max-width: 100%;
   margin-top: 0.15rem;
-  padding: 0.35rem 1.4rem;
-  border-radius: 9999px;
-  background: var(--accent);
-  color: var(--accent-fg);
+  color: var(--fg);
   font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
 }
-.link-hover-go:hover {
-  color: var(--accent-fg);
-  opacity: 0.9;
+.link-hover-open:hover {
+  opacity: 0.75;
 }
-.link-hover-go:focus-visible {
+.link-hover-open:focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: 2px;
 }
@@ -564,11 +583,19 @@ img.link-hover-icon {
     z-index: 30;
   }
 
-  .link-hover-item:hover .link-hover-card,
+  /* A short pause avoids flashing a card while the pointer sweeps past.
+     Keyboard focus stays immediate so the card is not a keyboard trap. */
+  .link-hover-item:hover .link-hover-card {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+    transition-delay: 0.6s;
+  }
   .link-hover-item:focus-within .link-hover-card {
     opacity: 1;
     visibility: visible;
     transform: translate(-50%, 0);
+    transition-delay: 0s;
   }
 }
 
